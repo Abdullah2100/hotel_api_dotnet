@@ -1,0 +1,73 @@
+
+# User-specific files
+*.rsuser
+
+# Ignore build and publish outputs
+bin/
+obj/
+.idea/
+out/
+*.exe
+*.dll
+*.pdb
+*.vshost.*
+*.app
+*.log
+*.swp
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Ignore Rider files
+.idea/
+
+# Ignore Visual Studio files
+.vscode/
+.vs/
+
+# User-specific files
+*.user
+*.suo
+*.userprefs
+
+# Auto-generated files
+Generated/
+*.generated.cs
+*.designer.cs
+
+# Logs and debug files
+*.log
+debug.log
+
+# Dependencies and packages
+packages/
+node_modules/
+jspm_packages/
+
+# Publish and deployment
+wwwroot/
+.publish/
+.DS_Store
+
+# Resharper files
+_ReSharper*
+*.DotSettings.user
+
+# Azure and VS Online settings
+.vs/
+.vscode/
+*.AzureActivityLog
+
+# Others
+coverage/
+*.snupkg
+*.nupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+
+#android
+*.gradle
+*build

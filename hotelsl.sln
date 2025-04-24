@@ -1,0 +1,33 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "hotel_api", "hotel_api", "{72BA814C-45A3-4202-982C-9E0A299D45E1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "hotel_api", "hotel_api\hotel_api\hotel_api.csproj", "{304C37A6-96D1-43BD-8347-7F72DFB0380A}"
+EndProject
+Project("{54a90642-561a-4bb1-a94e-469adee60c69}") = "hotel_dotnet_full_stack.client", "hotel_client\hotel_dotnet_full_stack.client.esproj", "{C8D06E96-921D-4F00-8987-6741FFBC9421}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{304C37A6-96D1-43BD-8347-7F72DFB0380A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{304C37A6-96D1-43BD-8347-7F72DFB0380A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{304C37A6-96D1-43BD-8347-7F72DFB0380A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{304C37A6-96D1-43BD-8347-7F72DFB0380A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C8D06E96-921D-4F00-8987-6741FFBC9421}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C8D06E96-921D-4F00-8987-6741FFBC9421}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C8D06E96-921D-4F00-8987-6741FFBC9421}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C8D06E96-921D-4F00-8987-6741FFBC9421}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{304C37A6-96D1-43BD-8347-7F72DFB0380A} = {72BA814C-45A3-4202-982C-9E0A299D45E1}
+	EndGlobalSection
+EndGlobal

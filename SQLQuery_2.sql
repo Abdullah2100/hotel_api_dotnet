@@ -1,0 +1,1465 @@
+\c postgres;
+DROP DATABASE hotel_db;
+CREATE DATABASE hotel_db;
+\c hotel_db;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-----
+-----
+
+
+-----
+-----
+CREATE TABLE images(
+    imageid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(200) NOT NULL,
+    belongTo UUID NOT NULL,
+    isThumnail BOOLEAN DEFAULT FALSE
+);
+-----
+-----
+-----
+
+CREATE OR REPLACE FUNCTION fun_operation_trigger()
+RETURNS TRIGGER
+AS $$
+BEGIN
+return NULL;
+END
+$$ LANGUAGE plpgsql;
+------
+------
+
+------
+------
+CREATE TRIGGER tr_images_insert
+BEFORE INSERT ON images
+FOR EACH ROW EXECUTE FUNCTION fun_operation_trigger();
+
+CREATE TRIGGER tr_images_update
+ BEFORE UPDATE ON images
+FOR EACH ROW EXECUTE FUNCTION fun_operation_trigger();
+
+
+CREATE TRIGGER tr_images_DELETE
+ BEFORE DELETE ON images
+FOR EACH ROW EXECUTE FUNCTION fun_operation_trigger();
+
+
+-----
+-----
+-----
+
+-----
+-----
+CREATE TABLE Persons (
+    PersonID UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    Name VARCHAR(50) NOT NULL,
+    Email VARCHAR(100) NOT NULL UNIQUE,
+    Phone VARCHAR(13) NOT NULL UNIQUE,
+    Address TEXT NULL
+);
+-----
+-----
+
+-----
+-----
+CREATE TRIGGER tr_person_insert 
+ BEFORE INSERT ON persons
+FOR EACH ROW EXECUTE FUNCTION fun_operation_trigger();
+
+CREATE TRIGGER tr_person_update
+ BEFORE UPDATE ON persons
+FOR EACH ROW EXECUTE FUNCTION fun_operation_trigger();
+
+
+CREATE TRIGGER tr_person_DELETE
+ BEFORE DELETE ON persons
+FOR EACH ROW EXECUTE FUNCTION fun_operation_trigger();
+
+
+-----
+-----
+
+-----
+-----
+CREATE TABLE Users (
+    UserID UUID PRIMARY KEY,
+    UserName VARCHAR(50) NOT NULL UNIQUE,
+    Password TEXT NOT NULL,
+    DateOfBirth DATE NOT NULL,
+    IsVIP bool DEFAULT FALSE,
+    PersonID UUID NOT NULL REFERENCES Persons (personid),
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+    UpdateAt TIMESTAMP DEFAULT NULL,
+    IsDeleted bool DEFAULT FALSE,
+    addBy UUID DEFAULT NULL,
+    Role Int DEFAULT 0  check(Role=0 OR Role=1)
+);
+----- role 0 is user 1 is admin
+-----
+
+-----
+-----
+
+
+
+CREATE TRIGGER tr_user_insert
+BEFORE INSERT ON users
+FOR EACH ROW EXECUTE FUNCTION fun_operation_trigger();
+
+CREATE TRIGGER tr_user_update
+BEFORE UPDATE ON users
+FOR EACH ROW EXECUTE FUNCTION fun_operation_trigger();
+
+
+CREATE TRIGGER tr_user_DELETE
+BEFORE DELETE ON users
+FOR EACH ROW EXECUTE FUNCTION fun_operation_trigger();
+
+
+
+
+-----
+-----
+
+
+-----
+-----
+CREATE OR REPLACE FUNCTION isAdmin(id UUID)
+RETURNS BOOLEAN AS $$
+DECLARE is_exist_id BOOLEAN;
+BEGIN
+
+SELECT COUNT(*) >= 1 INTO is_exist_id
+FROM persons per
+    LEFT JOIN users usr ON per.personid = usr.personid
+WHERE usr.role =1 ;
+
+RETURN is_exist_id;
+EXCEPTION
+WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+SQLERRM;
+RETURN FALSE;
+END;
+$$LANGUAGE plpgsql;
+-----
+-----
+
+
+
+-----
+-----
+CREATE VIEW usersview AS
+SELECT per.PersonID,
+    per.Name,
+    per.Phone,
+    per.Email,
+    per.Address,
+    use.UserID,
+    use.DateOfBirth,
+    use.UserName,
+    use.IsVIP,
+    use.CreatedAt,
+    use.password,
+    use.IsDeleted as ispersondeleted,
+    use.role
+FROM users use
+    INNER JOIN persons per ON use.personid = per.personid
+    ORDER BY use.CreatedAt DESC
+    ;
+-----
+-----
+
+
+
+-----
+-----
+CREATE OR REPLACE FUNCTION getUserPagination(pageNumber INT, limitNumber INT)
+RETURNS TABLE (
+    PersonId UUID,
+    Name VARCHAR(50),
+    Phone VARCHAR(13),
+    Email VARCHAR(100),
+    Address TEXT,
+    UserId UUID,
+    IsDeleted BOOL,
+    UserName VARCHAR(50),
+    DateOfBirth DATE,
+    IsVIP BOOL,
+    CreatedAt TIMESTAMP
+) AS $$ BEGIN RETURN QUERY
+SELECT per.PersonId,
+    per.Name,
+    per.Phone,
+    per.Email,
+    per.Address,
+    us.UserId,
+    us.IsDeleted,
+    us.UserName,
+    us.DateOfBirth,
+    us.IsVIP,
+    us.CreatedAt
+FROM Persons per
+    INNER JOIN Users us ON per.PersonID = us.PersonID
+ORDER BY us.CreatedAt DESC
+LIMIT limitNumber OFFSET limitNumber * (pageNumber - 1);
+EXCEPTION
+WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+SQLERRM;
+RETURN QUERY
+SELECT Null,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL;
+END $$ LANGUAGE plpgsql;
+-----
+-----
+
+
+
+-----
+-----
+
+CREATE OR REPLACE FUNCTION fn_user_insert_in (
+userId_u UUID,
+name_ VARCHAR(50),
+phone_ VARCHAR(13),
+email_ VARCHAR(100),
+address_ TEXT,
+username_ varchar(50),
+password_ TEXT,
+DateOfBirth_ DATE,
+addby_ UUID,
+role_ INT
+) RETURNS INT AS $$
+DECLARE 
+person_id UUID;
+is_there_already_admin BOOLEAN;
+is_already_user_name_And_id BOOLEAN;
+BEGIN
+
+IF role_ = 1 THEN
+        SELECT COUNT(*)>0  INTO is_there_already_admin FROM users WHERE role =1;
+        IF is_there_already_admin = TRUE THEN 
+          RAISE EXCEPTION 'Something went wrong: only one admin can be set';
+          RETURN 0;
+        END IF ;
+END IF;
+
+---validation for is already there username and id in database 
+SELECT COUNT(*)>0 INTO is_already_user_name_And_id 
+FROM users WHERE username = username_ OR UserID=userId_u;
+
+IF is_already_user_name_And_id=TRUE THEN 
+    RAISE EXCEPTION 'Something went wrong: username or userid is already exist';
+    RETURN 0;
+END IF;
+
+---validate user age
+
+IF DateOfBirth_ > CURRENT_DATE - INTERVAL '18 years' THEN 
+    RAISE EXCEPTION 'Something went wrong: account must be creation for adult';
+    RETURN 0;
+END IF;
+
+--disable the trigger
+ ALTER TABLE persons DISABLE TRIGGER ALL;
+    ALTER TABLE users DISABLE TRIGGER ALL;
+
+INSERT INTO persons(name, email, phone, address)
+VALUES (name_, email_, phone_, address_)
+RETURNING personid INTO person_id;
+
+
+
+INSERT INTO Users (
+        userid,
+        dateofbirth,
+        username,
+        password,
+        personid,
+        addby,
+        role
+    )
+VALUES(
+        userId_u,
+        DateOfBirth_,
+        username_,
+        password_,
+        person_id,
+        addby_,
+        role_
+    );
+
+---enable the trigger 
+ALTER TABLE persons ENABLE TRIGGER  ALL;   
+ALTER TABLE users ENABLE TRIGGER  ALL;   
+
+
+RETURN 1;
+EXCEPTION
+WHEN OTHERS THEN 
+
+ALTER TABLE persons ENABLE TRIGGER  ALL;   
+ALTER TABLE users ENABLE TRIGGER  ALL; 
+
+RAISE EXCEPTION 'Something went wrong: %',
+SQLERRM;
+
+RETURN 0;
+END;
+$$ LANGUAGE plpgsql;
+-----
+-----
+
+
+-----
+
+-----
+CREATE OR REPLACE FUNCTION fn_user_update(
+userid_u UUID,
+name_u VARCHAR(50),
+phone_u VARCHAR(13),
+address_u TEXT,
+username_u VARCHAR(50),
+password_u TEXT,
+IsVIP_u BOOLEAN,
+personid_u UUID,
+updatedBy UUID
+) RETURNS INT AS $$
+DECLARE 
+is_exist_userName BOOLEAN;
+is_hav_validation_toSet_to_vip BOOLEAN;
+BEGIN
+
+
+
+SELECT COUNT(*)>0 INTO is_hav_validation_toSet_to_vip FROM users where userid = updatedBy AND role = 1; 
+ 
+
+--disable the trigger
+
+ALTER TABLE persons DISABLE TRIGGER ALL;
+ALTER TABLE users DISABLE TRIGGER  ALL;
+
+UPDATE persons
+SET name = CASE
+        WHEN name <> name_u AND name_u IS NOT NULL  THEN name_u 
+        ELSE name
+    END,
+    phone = CASE
+        WHEN phone <> phone_u AND phone_u IS NOT NULL THEN phone_u
+        ELSE phone
+    END,
+    address = CASE
+        WHEN address <> address_u  AND address_u IS NOT NULL  THEN address_u
+        ELSE address
+    END
+WHERE personid = personid_u;
+---
+----
+UPDATE users
+SET username = CASE
+        WHEN username_u <> username AND username_u  IS NOT NULL THEN username_u
+        ELSE username
+    END,
+    password = CASE
+        WHEN password_u <> password AND password_u IS NOT NULL THEN password_u
+        ELSE password
+    END,
+    isvip = CASE
+        WHEN IsVIP_u <> isvip AND IsVIP_u IS NOT NULL AND is_hav_validation_toSet_to_vip= TRUE THEN IsVIP_u
+        ELSE isvip
+    END,        
+    UpdateAt = CURRENT_TIMESTAMP
+WHERE userid = userid_u;
+
+--enable the trigger
+ALTER TABLE persons ENABLE TRIGGER  ALL;   
+ALTER TABLE users ENABLE TRIGGER  ALL; 
+
+ 
+RETURN 1;
+EXCEPTION
+WHEN OTHERS THEN 
+
+--enable the trigger
+ALTER TABLE persons ENABLE TRIGGER  ALL;   
+ALTER TABLE users ENABLE TRIGGER  ALL; 
+
+
+RAISE EXCEPTION 'Something went wrong: %',
+SQLERRM;
+RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+-----
+-----
+
+
+-----
+-----
+CREATE OR REPLACE FUNCTION fn_user_deleted(userid_ UUID, modifiBy UUID) RETURNs INT AS $$
+DECLARE 
+    is_deleted BOOLEAN := false;
+    is_hasPermission_to_delete BOOLEAN := FALSE;
+BEGIN 
+    is_hasPermission_to_delete := isAdmin(modifiBy);
+    SELECT isdeleted INTO is_deleted
+    FROM users
+    WHERE userid = userid_;
+    
+    IF is_deleted = FALSE AND is_hasPermission_to_delete = TRUE THEN
+        
+        --disable the trigger
+        ALTER TABLE persons DISABLE TRIGGER ALL;
+        ALTER TABLE users DISABLE TRIGGER ALL;
+
+        UPDATE Users
+            SET IsDeleted = TRUE,
+            UpdateAt = CURRENT_TIMESTAMP
+        WHERE UserId = OLD.userid;
+        
+        --enable the trigger
+        ALTER TABLE persons ENABLE TRIGGER  ALL;   
+        ALTER TABLE users ENABLE TRIGGER  ALL; 
+
+
+        RETURN 1;
+
+    ELSE 
+        RAISE EXCEPTION 'only user or someone had permission can delete this user ';
+        RETURN 0;
+    END IF;
+
+EXCEPTION
+WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+SQLERRM;
+RETURN 0;
+END;
+$$LANGUAGE plpgsql;
+-----
+-----
+
+
+-----
+-----
+CREATE OR REPLACE FUNCTION isExistById(id UUID)
+RETURNS BOOLEAN AS $$
+DECLARE isExist BOOLEAN;
+
+BEGIN
+SELECT EXISTS(
+        SELECT 1 FROM  users WHERE  userid = id AND isdeleted  =  false
+
+    ) INTO isExist;
+RETURN isExist;
+ 
+EXCEPTION
+WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+SQLERRM;
+RETURN FALSE;
+END;
+$$LANGUAGE plpgsql;
+-----
+-----
+
+
+-----
+-----
+CREATE OR REPLACE FUNCTION isExistByIdAndEmail(email_hold VARCHAR(100),id UUID)
+RETURNS BOOLEAN AS $$
+DECLARE isExist BOOLEAN;
+BEGIN
+    SELECT COUNT(*)>0 INTO isExist
+    FROM persons per
+    LEFT JOIN users use ON per.personid = use.personid
+    WHERE per.email = email_hold
+    AND use.userid = id;
+    RETURN isExist >= 1;
+EXCEPTION
+    WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+    SQLERRM;
+    RETURN FALSE;
+END;
+$$LANGUAGE plpgsql;
+-----
+-----
+
+----
+----
+
+CREATE OR REPLACE FUNCTION isExistByEmailAndPhone(email_ TEXT,phone_ VARCHAR)
+RETURNS BOOLEAN AS $$
+DECLARE isExist BOOLEAN;
+BEGIN
+    SELECT COUNT(*)>0 INTO isExist 
+    FROM persons per
+    WHERE email = email_ OR phone =phone_ ;
+    RETURN isExist = TRUE;
+EXCEPTION
+    WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+    SQLERRM;
+    RETURN FALSE;
+END;
+$$LANGUAGE plpgsql;
+----
+----
+
+-----
+-----
+CREATE TABLE RoomTypes (
+    RoomTypeID UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    Name VARCHAR(50) NOT NULL,
+    CreatedBy UUID NOT NULL FOREIGN KEY REFERENCES Users (userid),
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UpdatedAt TIMESTAMP DEFAULT NULL,
+    IsDeleted bool DEFAULT FALSE
+);
+-----
+-----
+CREATE TRIGGER tr_roomTypes_insert
+BEFORE INSERT ON RoomTypes
+FOR EACH ROW EXECUTE FUNCTION fun_operation_trigger();
+
+CREATE TRIGGER tr_roomTypes_update
+BEFORE UPDATE ON RoomTypes
+FOR EACH ROW EXECUTE FUNCTION fun_operation_trigger();
+
+
+CREATE TRIGGER tr_roomTypes_DELETE
+BEFORE DELETE ON RoomTypes
+FOR EACH ROW EXECUTE FUNCTION fun_operation_trigger();
+
+
+-----
+-----
+CREATE OR REPLACE FUNCTION fn_roomtype_insert_new(
+        roomtype_id_holder UUID,
+        name_s VARCHAR,
+        createdby_s UUID
+    ) RETURNS BOOLEAN AS $$
+DECLARE
+     roomType_id UUID;
+     is_admin BOOLEAN := FALSE;
+BEGIN
+
+        is_admin := isAdmin(createdby_s);
+        IF is_admin = FALSE THEN
+            RAISE EXCEPTION 'only admin can create roomtype';
+            RETURN FALSE;
+        END IF;
+
+        ALTER TABLE RoomTypes DISABLE TRIGGER ALL;
+
+        INSERT INTO RoomTypes(roomtypeid, name, createdby)
+        VALUES (roomtype_id_holder, name_s, createdby_s)
+        RETURNING RoomTypeID INTO roomType_id;
+
+        ALTER TABLE RoomTypes ENABLE TRIGGER  ALL;
+
+        
+
+        IF roomType_id IS NOT NULL THEN
+             RETURN TRUE;
+        ELSE 
+            RAISE EXCEPTION 'roomtype not created';
+            RETURN FALSE;
+        END IF;
+EXCEPTION
+WHEN OTHERS THEN 
+    ALTER TABLE RoomTypes ENABLE TRIGGER  ALL;
+    RAISE EXCEPTION 'You do not have permission to create room type: %',
+    SQLERRM;
+    RETURN FALSE;
+END;
+$$ LANGUAGE plpgsql;
+-----
+-----
+
+
+-----
+-----
+CREATE OR REPLACE FUNCTION fn_roomtype_update_new(
+        name_s VARCHAR,
+        roomtypeid_s UUID,
+        createdby_s UUID
+    ) RETURNS BOOLEAN AS $$
+DECLARE 
+is_hasPermission BOOLEAN := FALSE;
+
+BEGIN 
+    is_hasPermission := isAdmin(createdby_s);
+    if is_hasPermission = FALSE THEN 
+        RAISE EXCEPTION 'you do not have permission to update roomtype';
+        RETURN FALSE;
+    END IF;
+
+    ALTER TABLE RoomTypes DISABLE TRIGGER ALL;
+
+    UPDATE RoomTypes
+        SET name = CASE
+                WHEN name <> name_s AND name_s IS NOT NULL THEN name_s
+                ELSE name
+            END,
+            UpdatedAt =  CURRENT_TIMESTAMP
+    WHERE roomtypeid = roomtypeid_s;
+    
+    ALTER TABLE RoomTypes ENABLE TRIGGER  ALL;
+
+    RETURN TRUE;
+
+EXCEPTION
+WHEN OTHERS THEN 
+
+    ALTER TABLE RoomTypes ENABLE TRIGGER  ALL;
+    RAISE EXCEPTION 'Something went wrong: %', SQLERRM;
+    RETURN FALSE;
+END;
+$$ LANGUAGE plpgsql;
+-----
+-----
+
+
+
+
+
+-----
+-----
+CREATE OR REPLACE FUNCTION fn_roomtype_delete() RETURNS TRIGGER AS $$ 
+DECLARE
+is_admin BOOLEAN;
+
+BEGIN
+
+    is_admin := isAdmin(createdby_s);
+    IF is_admin = FALSE THEN
+            RAISE EXCEPTION 'only admin can create roomtype';
+            RETURN FALSE;
+    END IF;
+
+     ALTER TABLE RoomTypes DISABLE TRIGGER ALL;
+
+    UPDATE roomtypes
+    SET IsDeleted = CASE
+            WHEN OLD.isdeleted = TRUE THEN FALSE
+            ELSE TRUE
+        END
+    WHERE roomtypeid = OLD.roomtypeid;
+
+    ALTER TABLE RoomTypes ENABLE TRIGGER  ALL;
+    RETURN NULL;
+EXCEPTION
+WHEN OTHERS THEN 
+    ALTER TABLE RoomTypes ENABLE TRIGGER  ALL;
+    RAISE EXCEPTION 'you do not have permission to delete roomtype';
+    RETURN NULL;
+END $$ LANGUAGE plpgsql;
+-----
+-----
+
+
+
+-----
+-----
+
+-- CREATE TRIGGER tr_roomtype_delete BEFORE DELETE ON roomtypes FOR EACH ROW EXECUTE FUNCTION fn_roomtype_delete();
+-----
+-----
+
+
+-----
+-----
+-- CREATE OR REPLACE TRIGGER tr_roomtType_insert BEFORE
+-- INSERT ON RoomTypes FOR EACH ROW EXECUTE FUNCTION fn_roomType_insert();
+-----
+-----
+
+-----
+-----
+-- CREATE OR REPLACE TRIGGER tr_roomtType_update BEFORE
+-- update ON RoomTypes FOR EACH ROW EXECUTE FUNCTION fn_roomType_insert();
+----
+----
+
+----
+----
+-- CREATE OR REPLACE FUNCTION fn_roomtype_update(name_n VARCHAR(50), createdBy_n UUID) RETURNS BOOLEAN AS $$
+-- DECLARE is_hasPermission BOOLEAN := FALSE;
+-- is_exist BOOLEAN := FALSE;
+-- BEGIN is_hasPermission := isAdmin(CreatedBy);
+-- IF is_hasPermission = false THEN RAISE EXCEPTION 'you do not have permission to update roomtype';
+-- RETURN 0;
+-- END IF;
+-- SELECT COUT(*) > 0 INTO is_exist
+-- FROM roomtypes;
+-- UPDATE roomtypes
+-- SET name = name_n,
+--     createdby = createdBy_n;
+-- RETURN TRUE;
+-- EXCEPTION
+-- WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+-- SQLERRM;
+-- RETURN FALSE;
+-- END;
+-- $$ LANGUAGE plpgsql;
+----
+----
+
+
+
+----
+----
+
+CREATE TABLE Rooms (
+    RoomID UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    Status VARCHAR(10) CHECK (
+        Status IN ('Available', 'Booked', 'Under Maintenance')
+    ) DEFAULT 'Available',
+    pricePerNight NUMERIC(10, 2),
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    roomtypeid UUID NOT NULL REFERENCES RoomTypes (roomtypeid),
+    capacity INT NOT NULL,
+    bedNumber INT NOT NULL,
+    belongTo UUID,
+    updateAt TIMESTAMP NULL,
+    isBlock BOOLEAN DEFAULT FALSE,
+    isDeleted BOOLEAN DEFAULT FALSE,
+    location POINT DEFAULT NULL,
+    place text DEFAULT NULL,
+     CONSTRAINT CHACK_IS_VALID_CREATION_ID CHECK(isExistById(belongTo)=TRUE)
+);
+----
+----
+
+
+
+
+----
+----
+
+CREATE OR REPLACE FUNCTION is_room_belong_to_user(
+    room_id UUID,
+    user_id UUID
+) RETURNS BOOLEAN
+AS $$
+DECLARE
+isBelongTo BOOLEAN;
+BEGIN
+
+SELECT 
+COUNT(*)>0 INTO isBelongTo 
+FROM rooms 
+WHERE roomid = room_id AND belongto = user_id;
+RETURN isBelongTo;
+EXCEPTION
+WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+SQLERRM;
+RETURN FALSE;
+
+END;
+$$LANGUAGE PLPGSQL;
+----
+----
+
+
+
+
+----
+----
+CREATE OR REPLACE FUNCTION getRoomsByPage(
+pageNumber INT,
+limitNumber INT,
+belongId UUID) RETURNS TABLE(
+        RoomID UUID,
+        Status VARCHAR(10),
+        pricePerNight NUMERIC(10, 2),
+        CreatedAt TIMESTAMP,
+        roomtypeid UUID,
+        capacity INT,
+        bedNumber INT,
+        belongTo UUID,
+        isblock Boolean,
+        isDeleted Boolean
+    ) AS $$ BEGIN
+
+IF pageNumber<1 THEN
+RAISE EXCEPTION 'the pageNumber is not valide ';
+
+END IF;
+
+RETURN QUERY SELECT
+rom.roomid,
+    rom.Status,
+    rom.pricepernight,
+    rom.CreatedAt,
+    rom.roomtypeid,
+    rom.capacity,
+    rom.bedNumber,
+    rom.belongTo
+    ,rom.isblock,
+    rom.isdeleted
+FROM rooms rom
+    INNER JOIN roomtypes romt ON rom.roomtypeid = romt.roomtypeid
+    LEFT JOIN users usr ON rom.belongto = usr.userid
+    LEFT JOIN admins adms ON rom.belongto = adms.adminid
+WHERE rom.isBlock = FALSE AND (belongId IS  NULL OR rom.belongTo=belongId)
+ORDER BY rom.CreatedAt DESC
+LIMIT limitNumber OFFSET limitNumber * (pageNumber - 1);
+EXCEPTION
+WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+SQLERRM;
+RETURN QUERY
+SELECT 
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+----
+----
+
+
+----
+----
+CREATE OR REPLACE FUNCTION fn_room_insert_new(
+        roomid_u UUID,
+        status VARCHAR(10),
+        pricePerNight_ NUMERIC(10, 2),
+        roomtypeid_ UUID,
+        capacity_ INT,
+        bedNumber_ INT,
+        belongTo_ UUID
+    ) RETURNS INT AS $$
+DECLARE roomid_holder UUID;
+is_hasPermission_to_delete BOOLEAN;
+BEGIN
+INSERT INTO rooms(
+        roomid,
+        Status,
+        pricePerNight,
+        roomtypeid,
+        capacity,
+        bedNumber,
+        belongTo
+    )
+VALUES (
+        roomid_u,
+        status,
+        pricePerNight_,
+        roomtypeid_,
+        capacity_,
+        bedNumber_,
+        belongTo_
+    )
+RETURNING roomid INTO roomid_holder;
+IF roomid_holder IS NOT NULL THEN RETURN 1;
+END IF;
+RETURN 0;
+EXCEPTION
+WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+SQLERRM;
+RETURN 0;
+END;
+$$ LANGUAGE PLPGSQL;
+---
+---
+CREATE OR REPLACE FUNCTION fn_room_insert() RETURNS TRIGGER AS $$
+DECLARE isUserDeleted BOOLEAN;
+BEGIN
+SELECT isdeleted INTO isUserDeleted
+FROM users
+WHERE userid = NEW.userid;
+IF isUserDeleted IS NOT NULL
+AND isUserDeleted = TRUE THEN RETURN NEW;
+END IF;
+RETURN NULL;
+EXCEPTION
+WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+SQLERRM;
+RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+---
+---
+CREATE TRIGGER tr_roomt_insert BEFORE
+INSERT ON rooms FOR EACH ROW EXECUTE FUNCTION fn_room_insert();
+---
+---
+
+---
+----
+CREATE OR REPLACE FUNCTION fn_room_update_new (
+        roomid_ UUID,
+        status_ VARCHAR(10),
+        pricePerNight_ NUMERIC(10, 2),
+        roomtypeid_ UUID,
+        capacity_ INT,
+        bedNumber_ INT
+    ) RETURNS Boolean AS $$
+DECLARE updateAt_holder TIMESTAMP;
+BEGIN
+UPDATE rooms
+SET Status = CASE
+        WHEN status <> status_
+        AND status_ IS NOT NULL THEN status_
+        ELSE status
+    END,
+    pricePerNight = CASE
+        WHEN pricePerNight_ <>  pricePerNight
+        AND pricePerNight_ IS NOT NULL THEN pricePerNight_
+        ELSE  pricePerNight
+    END,
+    roomtypeid = CASE
+        WHEN roomtypeid_ <>  roomtypeid
+        AND roomtypeid_ IS NOT NULL THEN roomtypeid_
+        ELSE  roomtypeid
+    END,
+    capacity = CASFE
+        WHEN capacity_ <>  capacity
+        AND capacity_ IS NOT NULL THEN capacity_
+        ELSE  capacity
+    END,
+    bedNumber = CASE
+        WHEN bedNumber_ <>  bedNumber
+        AND bedNumber_ IS NOT NULL THEN bedNumber_
+        ELSE  bedNumber
+    END,
+    updateAt = CURRENT_TIMESTAMP
+WHERE roomid = roomid_;
+SELECT updateAt INTO updateAt_holder
+FROM rooms
+WHERE roomid = roomid_;
+RETURN updateAt_holder is NOT NULL;
+EXCEPTION
+WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+SQLERRM;
+RETURN false;
+END;
+$$ LANGUAGE PLPGSQL;
+---
+---
+CREATE OR REPLACE FUNCTION fn_room_update() RETURNS TRIGGER AS $$
+DECLARE isUserDeleted BOOLEAN;
+BEGIN
+SELECT isdeleted INTO isUserDeleted
+FROM users
+WHERE userid = NEW.userid;
+IF isUserDeleted IS NOT NULL
+AND isUserDeleted = TRUE THEN RETURN NEW;
+END IF;
+RETURN NULL;
+EXCEPTION
+WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+SQLERRM;
+RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+--
+
+--
+CREATE TRIGGER tr_roomt_update BEFORE
+INSERT ON rooms FOR EACH ROW EXECUTE FUNCTION fn_room_update();
+----
+----
+-- CREATE OR REPLACE FUNCTION room_delete(
+--     room_id UUID,
+--     user_id UUID
+-- ) RETURNS BOOLEAN 
+-- AS $$
+-- DECLARE
+-- isHasPermission BOOLEAN;
+-- isItBelongToHim BOOLEAN;
+-- BEGIN
+-- isHasPermission = isAdmin(user_id);
+-- isItBelongToHim = is_room_belong_to_user(user_id,user_id);
+
+-- IF isHasPermission OR isItBelongToHim THEN
+--    UPDATE ROOMS SET  
+--    isdeleted = CASE WHEN  isdeleted=TRUE THEN FALSE ELSE TRUE END 
+--    WHERE roomid = room_id;
+--    RETURN TRUE;
+-- END IF;
+
+-- RETURN FALSE;
+-- EXCEPTION
+-- WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+-- SQLERRM;
+-- RETURN FALSE;
+-- END;
+-- $$ LANGUAGE plpgsql;
+---
+
+---
+
+CREATE OR REPLACE FUNCTION fn_room_delete_tr()
+RETURNS TRIGGER 
+AS $$
+BEGIN
+return null;
+END;
+$$ LANGUAGE plpgsql;
+---
+
+---
+
+CREATE TRIGGER tr_delete_room 
+BEFORE DELETE 
+ON rooms 
+FOR EACH ROW EXECUTE FUNCTION fn_room_delete_tr();
+
+----
+----
+
+CREATE OR REPLACE FUNCTION fun_validRoomId(room_id UUID)
+RETURNS BOOLEAN AS $$
+DECLARE
+isValId BOOLEAN:=0;
+BEGIN
+SELECT COUNT(*) > 0 INTO isValId
+FROM rooms WHERE roomid = room_id;
+return isValId;
+EXCEPTION
+WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+SQLERRM;
+RETURN FALSE;
+END
+$$LANGUAGE plpgsql;
+----
+----
+
+CREATE TABLE Bookings (
+    bookingID UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    roomID UUID NOT NULL ,
+    belongTo UUID NOT NULL ,
+    booking_start TIMESTAMP NOT NULL  CHECK (booking_start >= CURRENT_TIMESTAMP) ,
+    booking_end TIMESTAMP NOT NULL  CHECK (booking_end > booking_start)  ,
+    bookingStatus VARCHAR(50) NOT NULL CHECK (
+        bookingStatus IN ('Pending', 'Confirmed', 'Cancelled')
+    ) DEFAULT 'Confirmed',
+    totalPrice NUMERIC(10, 2) NOT NULL CHECK (totalPrice > 0),
+    servicePayment NUMERIC(10, 2)  NULL DEFAULT 0 CHECK (servicePayment >= 0),
+    maintenancePayment NUMERIC(10, 2)  NULL DEFAULT 0 CHECK (maintenancePayment >= 0),
+    paymentStatus VARCHAR(50) CHECK (
+        paymentStatus IN ('Paid', 'Unpaid')
+    ) DEFAULT 'Unpaid',
+    createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    cancelledAt TIMESTAMP  DEFAULT NULL,
+    cancellationReason TEXT DEFAULT NULL,
+    actualCheckOut TIMESTAMP DEFAULT Null,
+        CONSTRAINT CHACK_IS_VALID_CREATION_ID CHECK(isExistById(belongTo)=TRUE),
+        CONSTRAINT CHACK_IS_VALID_ROOMID_ID CHECK(fun_validRoomId(roomID)=TRUE)
+
+);
+----
+----
+
+
+
+----
+----
+
+CREATE OR REPLACE FUNCTION fn_isValid_booking(
+startBooking TIMESTAMP,
+endBooking TIMESTAMP,
+belongTo_ UUID
+)
+RETURNS BOOLEAN AS $$
+DECLARE
+isValid BOOLEAN := FALSE;
+BEGIN
+ IF startBooking IS NULL OR endBooking IS NULL THEN
+RAISE NOTICE 'Start and end booking dates cannot be NULL';
+RETURN FALSE;
+END IF;
+
+IF (startBooking >= CURRENT_TIMESTAMP) = false THEN
+        RAISE NOTICE 'Booking start date cannot be in the past';
+        RETURN FALSE;
+    END IF;
+
+    IF (endBooking::date - startBooking::date) <1 THEN
+      RAISE EXCEPTION 'Booking must at least one day ';
+      RETURN FALSE;
+    END IF;
+SELECT COUNT(*) > 0 INTO isValid 
+FROM bookings b
+WHERE (startBooking, endBooking) OVERLAPS (b.booking_start, b.booking_end) 
+AND (belongTo_ IS NULL OR belongTo_!=belongto)
+AND bookingStatus='Confirmed'  ;
+        RAISE NOTICE 'isbookingValide = %',isValid;
+
+RETURN isValid=false;
+EXCEPTION
+WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+SQLERRM;
+RETURN FALSE;
+END;
+$$ LANGUAGE plpgsql;
+-----
+-----
+
+-----
+-----
+CREATE OR REPLACE FUNCTION fn_bookin_insert(
+    roomid_ UUID,
+    totalprice_ NUMERIC(10, 2),
+    userid_ UUID,
+    startbookindate_ TIMESTAMP,
+    endbookingdate_ TIMESTAMP
+) RETURNS BOOLEAN AS $$
+DECLARE
+    isNotDeletion Boolean;
+BEGIN
+
+IF startbookindate_ < CURRENT_TIMESTAMP THEN
+        RAISE EXCEPTION 'Booking start date cannot be in the past';
+        RETURN FALSE;
+    END IF;
+
+SELECT isdeleted INTO  isNotDeletion  FROM users WHERE userid = userid_ And isdeleted=false;
+
+IF isNotDeletion = TRUE THEN
+RAISE EXCEPTION 'The user is deleted';
+RETURN FALSE;
+END IF;
+
+IF EXISTS (SELECT 1 FROM bookings b
+WHERE (startbookindate_, endbookingdate_) OVERLAPS (b.booking_start, b.booking_end)
+ AND b.bookingStatus='Confirmed')THEN
+RETURN FALSE;
+END IF;
+
+INSERT INTO bookings(
+    roomid,
+    belongto,
+    totalprice,
+	booking_start,
+	booking_end
+	
+) VALUES(
+    roomid_,
+    userid_,
+    totalprice_,
+    startbookindate_ ,
+    endbookingdate_
+);
+
+
+RETURN TRUE;
+EXCEPTION
+WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+SQLERRM;
+RETURN FALSE;
+END;
+$$ LANGUAGE plpgsql;
+-----
+-----
+
+-----
+-----
+
+CREATE OR REPLACE FUNCTION fn_bookin_update(
+    booking_id UUID,  
+    totalprice_ NUMERIC(10, 2),
+    userid_ UUID,
+	bookingstatus_ VARCHAR,
+    startbookindate_ TIMESTAMP,
+    endbookingdate_ TIMESTAMP
+) RETURNS BOOLEAN AS $$
+DECLARE
+    isNotDeletion Boolean;
+BEGIN
+
+IF startbookindate_ IS NOT NULL AND endbookingdate_ IS NOT NULL THEN 
+	IF EXISTS (SELECT 1 FROM bookings b
+			WHERE (startbookindate_, endbookingdate_) OVERLAPS (b.booking_start, b.booking_end)
+			 AND b.bookingid<>booking_id AND b.bookingStatus='Confirmed')THEN
+			RETURN FALSE;
+	END IF;
+
+	IF startbookindate_ < CURRENT_TIMESTAMP THEN
+        RAISE EXCEPTION 'Booking start date cannot be in the past';
+        RETURN FALSE;
+    END IF;
+END IF;
+
+
+
+SELECT isdeleted INTO  isNotDeletion  FROM users WHERE userid = userid_ And isdeleted=false;
+
+IF isNotDeletion = TRUE THEN
+RAISE EXCEPTION 'The user is deleted';
+RETURN FALSE;
+END IF;
+
+
+UPDATE  bookings  SET 
+totalprice = CASE WHEN totalprice_ <> totalprice AND totalprice_ IS NOT NULL
+THEN totalprice_ ELSE totalprice END,
+booking_start = CASE WHEN startbookindate_ <> booking_start AND startbookindate_ IS NOT NULL
+THEN startbookindate_ ELSE booking_start END,
+booking_end =  CASE WHEN endbookingdate_ <> booking_end AND endbookingdate_ IS NOT NULL
+THEN endbookingdate_ ELSE booking_end END,
+bookingstatus =  CASE WHEN bookingstatus_ <> bookingstatus AND bookingstatus_ IS NOT NULL
+THEN bookingstatus_ ELSE bookingstatus END
+WHERE bookingid = booking_id;
+
+RETURN TRUE;
+EXCEPTION
+WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+SQLERRM;
+RETURN FALSE;
+END;
+$$ LANGUAGE plpgsql;
+-----
+-----
+
+
+-----
+----- 
+CREATE OR REPLACE FUNCTION fun_get_list_of_booking_at_specific_month_and_year
+(
+year_ INT,
+month_ INT,
+bookingID UUID
+)
+RETURNS TEXT
+AS $$
+DECLARE
+startAt_ INT :=0;
+maxDayAtMon_ INT:=0;
+temp_date DATE;
+dayes_ TEXT :='';
+BEGIN
+   IF month_>12 OR month_<1 THEN 
+   RAISE NOTICE 'month is not valide ';
+   RETURN '';
+   END IF ;
+
+    maxDayAtMon_ := EXTRACT(DAY FROM 
+        (MAKE_DATE(year_, month_, 1) + INTERVAL '1 month - 1 day'));
+
+FOR day_num in 1..maxDayAtMon_ LOOP
+ 
+   IF EXISTS (
+  SELECT 1 FROM bookings 
+  WHERE 
+ 	 (
+	  		MAKE_DATE(year_, month_, day_num) = booking_start::DATE OR
+   			MAKE_DATE(year_, month_, day_num) = booking_end::DATE
+	 ) 
+  OR
+    (
+	        MAKE_DATE(year_, month_, day_num)
+            BETWEEN booking_start::DATE AND booking_end::DATE
+		  
+    ) AND
+	(
+	bookingID IS NULL OR bookingID!=bookingID
+
+	) AND bookingStatus='Confirmed'
+ ) THEN 
+     RAISE NOTICE 'THIS THE generatedDate =% ',
+   MAKE_DATE(year_, month_, day_num) ;
+   dayes_ := dayes_ || ', ' || day_num::TEXT;
+  END IF ; 
+END LOOP;
+
+RETURN  ltrim(dayes_, ',');
+
+EXCEPTION
+WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+SQLERRM;
+RETURN '';
+END;
+$$LANGUAGE plpgsql;
+-----
+-----
+
+
+-----
+-----
+
+-- CREATE OR REPLACE FUNCTION fn_booking_insert_tr()
+-- RETURNS TRIGGER
+-- AS $$
+-- DECLARE
+-- isValidId BOOLEAN;
+-- BEGIN
+-- isValidId = isExistById(NEW.belongto);
+-- IF isValidId = FALSE THEN
+-- RAISE EXCEPTION 'Something went wrong: %';
+-- RETURN NULL;
+-- END IF;
+-- RETURN NEW;
+-- EXCEPTION
+-- WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+-- SQLERRM;
+-- RETURN NULL;
+-- END;
+-- $$ LANGUAGE plpgsql;
+
+----
+----
+
+
+----
+----
+
+-- CREATE TRIGGER tr_bookin_insert
+-- BEFORE INSERT ON bookings
+-- FOR EACH ROW EXECUTE FUNCTION fn_booking_insert_tr();
+
+----
+----
+
+CREATE OR REPLACE FUNCTION fun_getBookingPagination(
+    belongId UUID,
+    pageNumber INT, 
+    limitNumber INT
+    )
+RETURNS  TABLE (
+     bookingID UUID ,
+    roomID UUID  ,
+    belongTo UUID  ,
+    booking_start TIMESTAMP   ,
+    booking_end TIMESTAMP   ,
+    bookingStatus VARCHAR(50) ,
+    totalPrice NUMERIC(10, 2) ,
+    servicePayment NUMERIC(10, 2) ,
+    maintenancePayment NUMERIC(10, 2)  ,
+    paymentStatus VARCHAR(50)  ,
+    createdAt TIMESTAMP    ,
+    cancelledAt TIMESTAMP  ,
+    cancellationReason TEXT  ,
+    actualCheckOut TIMESTAMP  
+)
+AS $$
+BEGIN
+
+RETURN QUERY SELECT 
+    b.bookingID ,
+    b.roomID   ,
+    b.belongTo   ,
+    b.booking_start   ,
+    b.booking_end   ,
+    b.bookingStatus  ,
+    b.totalPrice  ,
+    b.servicePayment ,
+    b.maintenancePayment   ,
+    b.paymentStatus   ,
+    b.createdAt  ,
+    b.cancelledAt   ,
+    b.cancellationReason   ,
+    b.actualCheckOut   
+FROM bookings b
+WHERE  (belongId IS NULL AND b.belongTo IS NOT NULL)   OR  b.belongTo = belongId 
+ORDER BY b.createdAt DESC
+LIMIT limitNumber OFFSET limitNumber * (pageNumber - 1);
+EXCEPTION
+WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+SQLERRM;
+RETURN QUERY 
+SELECT
+    NULL   ,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL;
+
+END;
+$$LANGUAGE plpgsql;
+----
+----
+
+CREATE OR REPLACE FUNCTION fun_getBookingBelongToUserPagination(
+    Userid UUID,
+    pageNumber INT, 
+    limitNumber INT
+    )
+RETURNS  TABLE (
+     bookingID UUID ,
+    roomID UUID  ,
+    belongTo UUID  ,
+    booking_start TIMESTAMP   ,
+    booking_end TIMESTAMP   ,
+    bookingStatus VARCHAR(50) ,
+    totalPrice NUMERIC(10, 2) ,
+    servicePayment NUMERIC(10, 2) ,
+    maintenancePayment NUMERIC(10, 2)  ,
+    paymentStatus VARCHAR(50)  ,
+    createdAt TIMESTAMP    ,
+    cancelledAt TIMESTAMP  ,
+    cancellationReason TEXT  ,
+    actualCheckOut TIMESTAMP  
+)
+AS $$
+BEGIN
+
+RETURN QUERY SELECT 
+    b.bookingID ,
+    b.roomID   ,
+    b.belongTo   ,
+    b.booking_start   ,
+    b.booking_end   ,
+    b.bookingStatus  ,
+    b.totalPrice  ,
+    b.servicePayment ,
+    b.maintenancePayment   ,
+    b.paymentStatus   ,
+    b.createdAt  ,
+    b.cancelledAt   ,
+    b.cancellationReason   ,
+    b.actualCheckOut   
+FROM bookings b
+INNER JOIN rooms ro 
+ON b.roomid = ro.roomid
+WHERE  ro.belongto =  Userid
+ORDER BY b.createdAt DESC
+LIMIT limitNumber OFFSET limitNumber * (pageNumber - 1);
+EXCEPTION
+WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+SQLERRM;
+RETURN QUERY 
+SELECT
+    NULL   ,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL;
+
+END;
+$$LANGUAGE plpgsql;
