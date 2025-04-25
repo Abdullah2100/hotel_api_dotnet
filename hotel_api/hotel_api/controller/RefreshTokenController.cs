@@ -39,12 +39,17 @@ public class RefreshTokenController : Controller
         {
             return Unauthorized("Invalid token");
         }
+        
+        var guid_id =Guid.Empty;
 
+        if (Guid.TryParse(id.Value.ToString(), out Guid guidOut))
+        {
+            guid_id = guidOut;
+        }
 
-        var guid_id = Guid.Parse(id.Value);
+        var emailHolder = email.Value.ToString();
 
-
-        if (!UserBuissnes.isExistByEmailAndID(email.Value, guid_id))
+        if (!UserBuissnes.isExistByEmailAndID(emailHolder,guid_id))
         {
             return Unauthorized("unAuthorize person ");
         }

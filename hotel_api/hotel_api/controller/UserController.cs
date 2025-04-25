@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace hotel_api.controller;
 
+[Authorize]
 [ApiController]
 [Route("api/user")]
 public class UserController : ControllerBase
@@ -19,7 +20,7 @@ public class UserController : ControllerBase
         this._config = config;
     }
 
-    [Authorize]
+ 
     [HttpGet("info")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -46,7 +47,7 @@ public class UserController : ControllerBase
         return Ok(userInfo.userDataHolder);
     }
 
-
+    [AllowAnonymous]
     [HttpPost("signUp")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -130,7 +131,7 @@ public class UserController : ControllerBase
         return StatusCode(201, new { accessToken = $"{accesstoken}", refreshToken = $"{refreshToken}" });
     }
 
-
+    [AllowAnonymous]
     [HttpPost("signIn")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -156,8 +157,7 @@ public class UserController : ControllerBase
     }
 
 
-    [Authorize]
-    [HttpPut("User")]
+    [HttpPut("")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -183,11 +183,12 @@ public class UserController : ControllerBase
 
 
         //this to get the userInsert data
-        var user = UserBuissnes.getUserByID((Guid)userID);
+        var user = UserBuissnes.getUserByID((Guid)userRequestDto.id);
 
         if (user == null)
             return NotFound("المستخدم غير موجود");
 
+        
         if (userRequestDto.updated_by != null)
         {
             var adminData = UserBuissnes.getUserByID(((Guid)userRequestDto.updated_by));
@@ -278,7 +279,7 @@ public class UserController : ControllerBase
         )
             user.password = clsUtil.hashingText(userRequestData.password);
 
-        if (userRequestData?.phone != null)
+        if (userRequestData?.phone != null &&user.personData.phone!=userRequestData.phone)
         {
             user.userDataHolder.personData.phone = userRequestData.phone;
         }
@@ -335,7 +336,7 @@ public class UserController : ControllerBase
             return BadRequest("فقط مدير النظام من لديه الصلاحية لحذف المستخدم");
         }
 
-        var result = UserBuissnes.deleteUser(userId);
+        var result = UserBuissnes.deletedUser(userId,(Guid)adminid);
         if (result == false)
             return StatusCode(500, "هناك مشكلة ما");
 

@@ -110,29 +110,30 @@ public class UserBuissnes
         return UserData.isExistByEmailAndID(email, id);
     }
 
-    public static bool deleteUser(Guid id)
-    {
-        return UserData.delete(id);
-    }
-
     public static bool makeVipUser(Guid id)
     {
         return UserData.vipUser(id);
     }
 
-    public static bool unnDeleteUser(Guid id)
-    {
-        return UserData.unDelete(id);
-    }
+    
 
     public static List<UserDto> getAllUsers(int pageNumber)
     {
         return UserData.getUsersByPage(pageNumber: pageNumber);
     }
 
-
+         
+    
     public static bool isExistByPassword(string password)
     {
         return UserData.isExistByBassword(password);
     }
+
+
+    public static bool deletedUser(Guid userid, Guid amdinId)
+    {
+        return UserData.delete(userid, amdinId);
+    } 
+   
+
 }

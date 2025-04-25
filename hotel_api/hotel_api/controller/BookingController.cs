@@ -7,11 +7,12 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace hotel_api.controller;
 
+[ApiController]
+[Route("api/booking")]
 public class BookingController : ControllerBase
 {
     
-    [Authorize]
-    [HttpPut("booking")]
+    [HttpPut("")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -89,8 +90,7 @@ public class BookingController : ControllerBase
         return StatusCode(200, new { message = "booking created seccessfully" });
     }
 
-    [Authorize]
-    [HttpDelete("booking{bookingId:guid}")]
+    [HttpDelete("{bookingId:guid}")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -134,8 +134,7 @@ public class BookingController : ControllerBase
     }
 
 
-    [Authorize]
-    [HttpPost("booking/between{year:int}&{month:int}&{bookingID:guid}")]
+    [HttpPost("between{year:int}&{month:int}&{bookingID:guid}")]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public IActionResult getBookingDayAtYearAndMont
@@ -149,8 +148,7 @@ public class BookingController : ControllerBase
     }
 
 
-    [Authorize]
-    [HttpGet("booking/{pageNumber:int}")]
+    [HttpGet("{pageNumber:int}")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -179,8 +177,7 @@ public class BookingController : ControllerBase
     }
 
 
-    [Authorize]
-    [HttpGet("booking/myRooms/{pageNumber:int}")]
+    [HttpGet("myRooms/{pageNumber:int}")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -206,6 +203,5 @@ public class BookingController : ControllerBase
 
         return Ok(myBookingListData);
     }
-
-   
+    
 }

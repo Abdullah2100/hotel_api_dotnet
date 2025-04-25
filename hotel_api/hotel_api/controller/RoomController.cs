@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace hotel_api.controller;
 
+[ApiController]
+[Route("api/room")]
 public class RoomController : ControllerBase
 {
     public RoomController(IConfigurationServices config)
@@ -18,8 +20,7 @@ public class RoomController : ControllerBase
     private readonly IConfigurationServices _config;
 
 
-    [Authorize]
-    [HttpPost("room")]
+    [HttpPost("")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -86,8 +87,7 @@ public class RoomController : ControllerBase
     }
 
 
-    [Authorize]
-    [HttpGet("room/me/{pageNumber:int}")]
+    [HttpGet("me/{pageNumber:int}")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -124,9 +124,46 @@ public class RoomController : ControllerBase
         }
     }
 
+    
+    
+    [HttpGet("{pageNumber:int}")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult>getRooms 
+        (int pageNumber)
+    {
+        try
+        {
+            var authorizationHeader = HttpContext.Request.Headers["Authorization"];
+            var id = AuthinticationServices.GetPayloadFromToken("id",
+                authorizationHeader.ToString().Replace("Bearer ", ""));
+            Guid? userID = null;
+            if (Guid.TryParse(id.Value.ToString(), out Guid outID))
+            {
+                userID = outID;
+            }
 
-    [Authorize]
-    [HttpPut("room/{roomId:guid}")]
+            if (userID == null)
+            {
+                return StatusCode(401, "you not have Permission");
+            }
+
+            var rooms = RoomBuisness.getAllRooms(
+                pageNumber,
+                25
+            );
+            return Ok(rooms);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, "Something went wrong");
+        }
+    }
+
+
+    [HttpPut("{roomId:guid}")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -216,8 +253,7 @@ public class RoomController : ControllerBase
     }
 
 
-    [Authorize]
-    [HttpDelete("room/{roomId:guid}")]
+    [HttpDelete("{roomId:guid}")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
