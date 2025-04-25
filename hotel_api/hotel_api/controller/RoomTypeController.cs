@@ -21,7 +21,7 @@ public class RoomTypeController: ControllerBase
     private readonly IConfigurationServices _config;
     
       
-        [HttpPost("")]
+        [HttpPost()]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -52,13 +52,13 @@ public class RoomTypeController: ControllerBase
             }
 
             if (roomTypeData.name.Length > 50)
-                return StatusCode(400, "roomtype name must be under 50 characters");
+                return StatusCode(400, "الاسم يجب الا يتجاوز ال 50 حرف");
 
 
             bool isExistName = RoomtTypeBuissnes.isExist(roomTypeData.name);
 
             if (isExistName)
-                return StatusCode(400, "roomtype is already exist");
+                return StatusCode(400, "نوع الغرفة موجود بالفعل");
 
 
             var roomtypeid = Guid.NewGuid();
@@ -85,9 +85,9 @@ public class RoomTypeController: ControllerBase
             var result = roomTypeHolder.save();
 
             if (result == false)
-                return StatusCode(500, "some thing wrong");
+                return StatusCode(500, " هناك مشكالة ما");
 
-            return StatusCode(201, new { message = "created seccessfully" });
+            return StatusCode(201, new { message = "تم الانشاء بنجاح" });
         }
 
 
@@ -111,16 +111,9 @@ public class RoomTypeController: ControllerBase
 
                 if (adminid == null)
                 {
-                    return StatusCode(401, "you not have Permission");
+                    return StatusCode(401, "تسجيل غير مصرح");
                 }
 
-                // var isHasPermission = AdminBuissnes.isAdminExist(adminid ?? Guid.Empty);
-                //
-                //
-                // if (!isHasPermission)
-                // {
-                //     return StatusCode(401, "you not have Permission");
-                // }
 
                 var roomtypes = RoomtTypeBuissnes.getRoomTypes(isNotDeletion ?? false);
 
@@ -129,18 +122,19 @@ public class RoomTypeController: ControllerBase
             catch (Exception e)
             {
                 Console.WriteLine(e);
-                return StatusCode(500, "some thing wrong");
+                return StatusCode(500, "هناك خطب ما");
             }
         }
 
 
-        [HttpPut("{roomtypeid:guid}")]
+        [HttpPut()]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> updateRoomTypes([FromForm] RoomTypeRequestUpdateDto roomTypeData,
-            Guid roomtypeid)
+        public async Task<IActionResult> updateRoomTypes(
+            [FromForm] RoomTypeRequestUpdateDto roomTypeData
+            )
         {
             var authorizationHeader = HttpContext.Request.Headers["Authorization"];
             var id = AuthinticationServices.GetPayloadFromToken("id",
@@ -153,28 +147,31 @@ public class RoomTypeController: ControllerBase
 
             if (adminid == null)
             {
-                return StatusCode(401, "you not have Permission");
+                return StatusCode(401, "ليس لديك الصلاحية");
             }
 
-            // var isHasPermissionToCreateUser = AdminBuissnes.isAdminExist(adminid ?? Guid.Empty);
-            //
-            //
-            // if (!isHasPermissionToCreateUser)
-            // {
-            //     return StatusCode(401, "you not have Permission");
-            // }
+            var adminData = UserBuissnes.getUserByID((Guid)adminid);
+            
+            if (adminData==null)
+            {
+                return BadRequest("المستخدم غير موجو");
+            } 
+          
+            if (adminData.isUser == true)
+            {
+                return BadRequest("مدير النظام فقط من يمكنه انشاء نوع غرف");
+            } 
 
-
-            if (roomTypeData.name.Length > 50 || roomtypeid == null)
+            if (roomTypeData.name.Length > 50 || roomTypeData.Id == null)
                 return StatusCode(400, "roomtype name must be under 50 characters");
 
 
-            var roomtypeHolder = RoomtTypeBuissnes.getRoomType(roomtypeid);
+            var roomtypeHolder = RoomtTypeBuissnes.getRoomType(roomTypeData.Id);
 
             if (roomtypeHolder == null)
-                return StatusCode(400, "roomtype is already exist");
+                return StatusCode(400, "نوع الغرفة غير موجود");
 
-            var imageHolder = ImageBuissness.getImageByBelongTo((Guid)roomtypeid);
+            var imageHolder = ImageBuissness.getImageByBelongTo(roomTypeData.Id);
 
             string? imageHolderPath = null;
             if (roomTypeData.image != null)
@@ -184,15 +181,15 @@ public class RoomTypeController: ControllerBase
             }
 
 
-            clsUtil.saveImage(imageHolderPath, roomtypeid, imageHolder);
+            clsUtil.saveImage(imageHolderPath, roomTypeData.Id, imageHolder);
 
             updateRoomTypeData(ref roomtypeHolder, roomTypeData, (Guid)adminid);
             var result = roomtypeHolder.save();
 
             if (result == false)
-                return StatusCode(500, "some thing wrong");
+                return StatusCode(500, "هناك مشكله ما");
 
-            return StatusCode(201, new { message = "created seccessfully" });
+            return StatusCode(201, new { message = "تم التعديل بنجاح" });
         }
 
 
@@ -230,29 +227,31 @@ public class RoomTypeController: ControllerBase
 
             if (adminid == null)
             {
-                return StatusCode(401, "you not have Permission");
+                return StatusCode(401, "دخول غير مصرح");
             }
+            
+            var adminData = UserBuissnes.getUserByID((Guid)adminid);
 
-            // var isHasPermissionToCreateUser = AdminBuissnes.isAdminExist(adminid ?? Guid.Empty);
-            //
-            //
-            // if (!isHasPermissionToCreateUser)
-            // {
-            //     return StatusCode(401, "you not have Permission");
-            // }
-
-
+            if (adminData==null)
+            {
+                return BadRequest("المستخدم غير موجو");
+            } 
+          
+            if (adminData.isUser == true)
+            {
+                return BadRequest("مدير النظام فقط من يمكنه انشاء نوع غرف");
+            } 
             var data = RoomtTypeBuissnes.getRoomType(roomtypeid);
 
             if (data == null)
-                return StatusCode(409, "user notFound exist");
+                return StatusCode(409, "نوع الغرفة غير موجود");
 
 
-            var result = RoomtTypeBuissnes.deleteOrUnDeleteRoomType(roomtypeid);
+            var result = RoomtTypeBuissnes.deleteOrUnDeleteRoomType(roomtypeid,adminid:(Guid)adminid);
             if (result == false)
-                return StatusCode(500, "some thing wrong");
+                return StatusCode(500, "هناك مشكلة ما");
 
-            return StatusCode(201, new { message = "created seccessfully" });
+            return Ok("تم التعديل بنجاح");
         }
  
 }

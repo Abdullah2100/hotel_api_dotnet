@@ -96,8 +96,8 @@ public class RoomtTypeBuissnes
     }
 
 
-    public static bool deleteOrUnDeleteRoomType(Guid id)
+    public static bool deleteOrUnDeleteRoomType(Guid id,Guid adminid)
     {
-        return      RoomTypeData.deleteOrUnDelete(id);
+        return      RoomTypeData.deleteOrUnDelete(id ,adminid:adminid);
     }
 }

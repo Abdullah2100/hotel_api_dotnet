@@ -292,7 +292,8 @@ public class RoomTypeData
         }
     }
     public static bool deleteOrUnDelete(
-        Guid id
+        Guid id,
+        Guid adminid
     )
     {
         bool isDeleted = false;
@@ -301,13 +302,19 @@ public class RoomTypeData
             using (var connection = new NpgsqlConnection(connectionUr))
             {
                 connection.Open();
-                string query = @"DELETE FROM  roomtypes WHERE roomtypeid =@id;";
+                string query = @"SELECT * FROM fn_roomtype_delete(@adminid,@roomtypeid)";
 
                 using (var cmd = new NpgsqlCommand(query, connection))
                 {
-                    cmd.Parameters.AddWithValue("@id", id);
-                    cmd.ExecuteNonQuery();
-                    isDeleted = true;
+                    cmd.Parameters.AddWithValue("@adminid", adminid);
+                    cmd.Parameters.AddWithValue("@roomtypeid", id);
+                    var result =cmd.ExecuteScalar();
+                    if (bool.TryParse(result.ToString(), out bool resultOut))
+                    {
+                        
+                    isDeleted = resultOut;
+                    }
+                    
                 }
             }
 
