@@ -9,8 +9,8 @@ public class ImageBuissness
     public enMode mode { get; set; }  
     public Guid? ID  { get; set; }
     public string path { get; set; }
-    public Guid? belongTo   { get; set; }    
-    public bool? isThumnail   { get; set; }    
+    public Guid? belongTo   { get; set; }
+    public bool? isThumnail { get; set; } = false;
     public ImagesTbDto imageHolder{get{return new ImagesTbDto(
         imagePathId:ID,
         imagePath:path,

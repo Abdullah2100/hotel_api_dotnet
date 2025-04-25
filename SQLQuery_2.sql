@@ -433,7 +433,7 @@ $$LANGUAGE plpgsql;
 CREATE TABLE RoomTypes (
     RoomTypeID UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     Name VARCHAR(50) NOT NULL,
-    CreatedBy UUID NOT NULL FOREIGN KEY REFERENCES Users (userid),
+    CreatedBy UUID NOT NULL  REFERENCES Users (userid),
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt TIMESTAMP DEFAULT NULL,
     IsDeleted bool DEFAULT FALSE
@@ -531,13 +531,16 @@ $$ LANGUAGE plpgsql;
 
 -----
 -----
-CREATE OR REPLACE FUNCTION fn_roomtype_delete() RETURNS TRIGGER AS $$ 
+CREATE OR REPLACE FUNCTION fn_roomtype_delete(
+deltedBy_id UUID,
+roomtype_id UUID
+) RETURNS Boolean AS $$ 
 DECLARE
 is_admin BOOLEAN;
 
 BEGIN
 
-    is_admin := isAdmin(createdby_s);
+    is_admin := isAdmin(deltedBy_id);
     IF is_admin = FALSE THEN
             RAISE EXCEPTION 'only admin can create roomtype';
             RETURN FALSE;
@@ -546,17 +549,17 @@ BEGIN
 
     UPDATE roomtypes
     SET IsDeleted = CASE
-            WHEN OLD.isdeleted = TRUE THEN FALSE
+            WHEN isdeleted = TRUE THEN FALSE
             ELSE TRUE
         END
-    WHERE roomtypeid = OLD.roomtypeid;
+    WHERE roomtypeid = roomtype_id;
 
-    RETURN NULL;
+    RETURN TRUE;
 EXCEPTION
 WHEN OTHERS THEN 
 
     RAISE EXCEPTION 'you do not have permission to delete roomtype';
-    RETURN NULL;
+    RETURN FALSE;
 END $$ LANGUAGE plpgsql;
 -----
 -----
@@ -587,7 +590,7 @@ CREATE TABLE Rooms (
     roomtypeid UUID NOT NULL REFERENCES RoomTypes (roomtypeid),
     capacity INT NOT NULL,
     bedNumber INT NOT NULL,
-    belongTo UUID FOREIGN KEY users(userid),
+    belongTo UUID REFERENCES users(userid),
     updateAt TIMESTAMP NULL,
     isBlock BOOLEAN DEFAULT FALSE,
     isDeleted BOOLEAN DEFAULT FALSE,
@@ -788,7 +791,7 @@ BEGIN
             AND roomtypeid_ IS NOT NULL THEN roomtypeid_
             ELSE  roomtypeid
         END,
-        capacity = CASFE
+        capacity = CASE
             WHEN capacity_ <>  capacity
             AND capacity_ IS NOT NULL THEN capacity_
             ELSE  capacity
@@ -826,8 +829,8 @@ BEGIN
          FROM users
     WHERE userid = NEW.userid;
 
-    IF isUserDeleted IS NOT NULL THEN
-         AND isUserDeleted = TRUE THEN RETURN NEW;
+    IF isUserDeleted IS NOT NULL AND isUserDeleted = TRUE THEN 
+		RETURN NEW;
     END IF;
 
     RETURN NULL;
@@ -845,8 +848,8 @@ $$ LANGUAGE plpgsql;
 
 CREATE TABLE Bookings (
     bookingID UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    roomID UUID NOT NULL  FOREIGN key rooms(roomid),
-    belongTo UUID NOT NULL FOREIGN key users(userid),
+    roomID UUID NOT NULL  REFERENCES  rooms(roomid),
+    belongTo UUID NOT NULL REFERENCES  users(userid),
     booking_start TIMESTAMP NOT NULL  CHECK (booking_start >= CURRENT_TIMESTAMP) ,
     booking_end TIMESTAMP NOT NULL  CHECK (booking_end > booking_start)  ,
     bookingStatus VARCHAR(50) NOT NULL CHECK (

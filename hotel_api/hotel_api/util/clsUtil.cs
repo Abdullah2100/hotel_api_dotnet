@@ -71,7 +71,7 @@ namespace hotel_api.util
                             imagePath: imagePath,
                             belongTo: (Guid)id,
                             imagePathId: null,
-                            isThumnail: imageHolder.isThumnail));
+                            isThumnail: false));
                 imageHolder.save();
             }
         }
