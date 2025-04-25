@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace hotel_api.controller;
 
+[Authorize]
 [ApiController]
 [Route("api/roomType")]
 public class RoomTypeController: ControllerBase
@@ -19,8 +20,8 @@ public class RoomTypeController: ControllerBase
 
     private readonly IConfigurationServices _config;
     
-       [Authorize]
-        [HttpPost("roomtype")]
+      
+        [HttpPost("")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -44,14 +45,11 @@ public class RoomTypeController: ControllerBase
                 return StatusCode(401, "you not have Permission");
             }
 
-            // var isHasPermissionToCreateRoomType = AdminBuissnes.isAdminExist(adminid ?? Guid.Empty);
-
-
-            // if (!isHasPermissionToCreateRoomType)
-            // {
-            //     return StatusCode(401, "you not have Permission");
-            // }
-
+            var adminData = UserBuissnes.getUserByID((Guid)adminid);
+            if (adminData.isUser == true)
+            {
+                return BadRequest("مدير النظام فقط من يمكنه انشاء نوع غرف");
+            }
 
             if (roomTypeData.name.Length > 50)
                 return StatusCode(400, "roomtype name must be under 50 characters");
@@ -93,8 +91,7 @@ public class RoomTypeController: ControllerBase
         }
 
 
-        [Authorize]
-        [HttpGet("roomtype{isNotDeletion:bool}")]
+        [HttpGet("{isNotDeletion:bool}")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -137,8 +134,7 @@ public class RoomTypeController: ControllerBase
         }
 
 
-        [Authorize]
-        [HttpPut("roomtype/{roomtypeid:guid}")]
+        [HttpPut("{roomtypeid:guid}")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -214,8 +210,7 @@ public class RoomTypeController: ControllerBase
         }
 
 
-        [Authorize]
-        [HttpDelete("roomtype/{roomtypeid:guid}")]
+        [HttpDelete("{roomtypeid:guid}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]

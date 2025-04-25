@@ -452,7 +452,8 @@ namespace hotel_data
 
 
         public static bool delete(
-            Guid id
+            Guid id,
+            Guid adminid
         )
         {
             bool isDeleted = false;
@@ -461,13 +462,17 @@ namespace hotel_data
                 using (var connection = new NpgsqlConnection(connectionUr))
                 {
                     connection.Open();
-                    string query = @"DELETE FROM  users WHERE userid =@id;";
+                    string query = @"SELECT *  FROM  fn_delete_user(@userid,@deletedBy);";
 
                     using (var cmd = new NpgsqlCommand(query, connection))
                     {
-                        cmd.Parameters.AddWithValue("@id", id);
-                        cmd.ExecuteNonQuery();
-                        isDeleted = true;
+                        cmd.Parameters.AddWithValue("@userid", id);
+                        cmd.Parameters.AddWithValue("@deletedBy", adminid);
+                        var result =cmd.ExecuteScalar();
+                        if (result != null)
+                        {
+                            isDeleted = ((int)result) > 0;
+                        } 
                     }
                 }
 
@@ -552,7 +557,7 @@ namespace hotel_data
                 using (var con = new NpgsqlConnection(connectionUr))
                 {
                     con.Open();
-                    string query = @"SELECT isExistByIdAndEmail(@email_hold,@id)";
+                    string query = @"SELECT * FROM  isExistByIdAndEmail(@email_hold,@id)";
 
                     using (var cmd = new NpgsqlCommand(query, con))
                     {
@@ -561,9 +566,9 @@ namespace hotel_data
 
 
                         var result = cmd.ExecuteScalar();
-                        if (result != null && bool.Parse(result.ToString()!)==true)
+                        if (result != null && bool.TryParse(result.ToString(),out bool outResult))
                         {
-                            isExist = true;
+                            isExist = outResult;
                         }
 
                     }
