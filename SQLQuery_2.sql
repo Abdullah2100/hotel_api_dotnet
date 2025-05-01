@@ -3,6 +3,7 @@ DROP DATABASE hotel_db;
 CREATE DATABASE hotel_db;
 \c hotel_db;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION postgis;
 -----
 -----
 
@@ -418,7 +419,7 @@ BEGIN
     SELECT COUNT(*)>0 INTO isExist 
     FROM persons per
     WHERE email = email_ OR phone =phone_ ;
-    RETURN isExist = TRUE;
+    RETURN isExist;
 EXCEPTION
     WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
     SQLERRM;
@@ -594,7 +595,7 @@ CREATE TABLE Rooms (
     updateAt TIMESTAMP NULL,
     isBlock BOOLEAN DEFAULT FALSE,
     isDeleted BOOLEAN DEFAULT FALSE,
-    location POINT DEFAULT NULL,
+    location GEOMETRY(Point, 4326)  DEFAULT NULL,
     place text DEFAULT NULL
 );
 ----
@@ -648,7 +649,10 @@ belongId UUID) RETURNS TABLE(
         bedNumber INT,
         belongTo UUID,
         isblock Boolean,
-        isDeleted Boolean
+        isDeleted Boolean,
+        place TEXT,
+         longitude FLOAT,
+        latitude FLOAT
     ) AS $$ BEGIN
 
     IF pageNumber<1 THEN
@@ -665,7 +669,10 @@ rom.roomid,
     rom.bedNumber,
     rom.belongTo
     ,rom.isblock,
-    rom.isdeleted
+    rom.isdeleted,
+    rom.place,
+    ST_X(romlocation)::FLOAT as longitude,
+    ST_X(romlocation)::FLOAT as latitude
 FROM rooms rom
     INNER JOIN roomtypes romt ON rom.roomtypeid = romt.roomtypeid
     LEFT JOIN users usr ON rom.belongto = usr.userid
@@ -687,25 +694,85 @@ SELECT
     NULL,
     NULL,
     NULL,
+    NULL,
+    NULL,
+    NULL,
     NULL;
 END;
 $$ LANGUAGE plpgsql;
-
 ----
 ----
+CREATE OR REPLACE FUNCTION getRoomsByID(
+roomId_ UUID
+) RETURNS TABLE(
+        RoomID UUID,
+        Status VARCHAR(10),
+        pricePerNight NUMERIC(10, 2),
+        CreatedAt TIMESTAMP,
+        roomtypeid UUID,
+        capacity INT,
+        bedNumber INT,
+        belongTo UUID,
+        isblock BOOLEAN,
+        isDeleted BOOLEAN,
+		 place TEXT,
+         longitude FLOAT,
+        latitude FLOAT
+    ) AS $$ BEGIN
 
+
+RETURN QUERY SELECT
+rom.roomid,
+    rom.Status,
+    rom.pricepernight,
+    rom.CreatedAt,
+    rom.roomtypeid,
+    rom.capacity,
+    rom.bedNumber,
+    rom.belongTo
+    ,rom.isblock,
+    rom.isdeleted,
+	rom.place,
+    ST_X(rom.location)::FLOAT as longitude,
+    ST_X(rom.location)::FLOAT as latitude
+FROM rooms rom
+
+WHERE rom.isBlock = FALSE AND  rom.roomid=roomId_;
+EXCEPTION
+WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+SQLERRM;
+RETURN QUERY
+SELECT 
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+	NULL
+    NULL;
+END;
+$$ LANGUAGE plpgsql;
+----
 
 ----
 ----
 CREATE OR REPLACE FUNCTION fn_room_insert_new(
-        roomid_u UUID,
+         room_id UUID,
         status VARCHAR(10),
         pricePerNight_ NUMERIC(10, 2),
         roomtypeid_ UUID,
         capacity_ INT,
         bedNumber_ INT,
-        belongTo_ UUID
-    ) RETURNS INT AS $$
+        belongTo_ UUID,
+        location_ GEOMETRY ,
+        place_ text 
+    ) RETURNS UUID AS $$
 DECLARE roomid_holder UUID;
 is_hasPermission_to_delete BOOLEAN;
 BEGIN
@@ -716,25 +783,28 @@ INSERT INTO rooms(
         roomtypeid,
         capacity,
         bedNumber,
-        belongTo
+        belongTo,
+        location,
+        place
     )
 VALUES (
-        roomid_u,
+        room_id,
         status,
         pricePerNight_,
         roomtypeid_,
         capacity_,
         bedNumber_,
-        belongTo_
+        belongTo_,
+        location_,
+        place_
     )
 RETURNING roomid INTO roomid_holder;
-IF roomid_holder IS NOT NULL THEN RETURN 1;
-END IF;
-RETURN 0;
+ 
+RETURN roomid_holder;
 EXCEPTION
 WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
 SQLERRM;
-RETURN 0;
+RETURN NULL;
 END;
 $$ LANGUAGE PLPGSQL;
 ---
@@ -742,24 +812,24 @@ $$ LANGUAGE PLPGSQL;
 
 ---
 ---
-CREATE OR REPLACE FUNCTION fn_room_insert() RETURNS TRIGGER AS $$
-DECLARE isUserDeleted BOOLEAN;
-BEGIN
-    SELECT isdeleted INTO isUserDeleted
-    FROM users
-    WHERE userid = NEW.userid;
+-- CREATE OR REPLACE FUNCTION fn_room_insert() RETURNS TRIGGER AS $$
+-- DECLARE isUserDeleted BOOLEAN;
+-- BEGIN
+--     SELECT isdeleted INTO isUserDeleted
+--     FROM users
+--     WHERE userid = NEW.userid;
     
-    IF isUserDeleted IS NOT NULL
-         AND isUserDeleted = TRUE THEN RETURN NEW;
-    END IF;
+--     IF isUserDeleted IS NOT NULL
+--          AND isUserDeleted = TRUE THEN RETURN NEW;
+--     END IF;
 
-RETURN NULL;
-EXCEPTION
-    WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
-    SQLERRM;
-    RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
+-- RETURN NULL;
+-- EXCEPTION
+--     WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+--     SQLERRM;
+--     RETURN NULL;
+-- END;
+-- $$ LANGUAGE plpgsql;
 ---
 ---
 

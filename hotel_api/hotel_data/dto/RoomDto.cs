@@ -3,7 +3,7 @@ namespace hotel_data.dto;
 public class RoomDto
 {
     public RoomDto(
-        Guid roomId,
+        Guid? roomId,
         string? status,
         decimal pricePerNight,
         int capacity,
@@ -38,10 +38,10 @@ public class RoomDto
         this.user = userData;
 
         this.roomTypeData = RoomTypeData.getRoomType(roomtypeid);
-        this.images = images;
+        this.images = ImagesData.images(roomId);
     }
 
-    public Guid roomId { get; set; }
+    public Guid? roomId { get; set; }
     public string? status { get; set; } = "Available";
     public decimal pricePerNight { get; set; }
     public int capacity { get; set; }

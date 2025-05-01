@@ -8,7 +8,7 @@ public class RoomBuisness
 
     enMode mode = enMode.add;
 
-    public Guid ID { get; set; }
+    public Guid? ID { get; set; }
     public string status { get; set; } = "Available";
     public decimal pricePerNight { get; set; }
     public int capacity { get; set; }
@@ -53,19 +53,24 @@ public class RoomBuisness
         this.bedNumber = roomData.capacity;
         this.beglongTo = roomData.beglongTo;
         this.createdAt = roomData.createdAt;
+        this.location=roomData.location;
+        this.longitude = roomData.longitude;
+        this.latitude = roomData.latitude;
         this.mode = mode;
     }
 
     private bool _create()
     {
-        bool isCreated = RoomData.createRoom(roomHolder);
-        return isCreated;
+        Guid? result = RoomData.createRoom(roomHolder);
+        this.ID = result;
+        return (result != null);
     }
 
     private bool _update()
     {
-        bool isUpdate = RoomData.updateRoom(roomHolder);
-        return isUpdate;
+        // bool isUpdate = RoomData.u(roomHolder);
+        //return isUpdate;
+        return false;
     }
 
     public bool save()
@@ -87,19 +92,26 @@ public class RoomBuisness
     }
 
 
-    public static List<RoomDto> getAllRooms(
+    public static List<RoomDto>? getAllRooms(
         int pagenumber,
         int limitPerPage,
         Guid? userId=null
         )
     {
-        return RoomData.getRoomByPage(
-            pagenumber, 
-            limitPerPage,
-            userId
-            );
+        // return RoomData.getRoomByPage(
+        //     pagenumber, 
+        //     limitPerPage,
+        //     userId
+        //     );
+        return null;
     }
 
+    public  RoomBuisness? getRoom()
+    {
+        var result = RoomData.getRoom((Guid)ID!);
+        if (result != null) return new RoomBuisness(result, enMode.update);
+        return null;
+    }
     public static RoomBuisness? getRoom(Guid roomId)
     {
         var result = RoomData.getRoom(roomId);
@@ -109,6 +121,7 @@ public class RoomBuisness
 
     public static bool deleteRoom(Guid roomId, Guid userId)
     {
-        return RoomData.deleteRoom(roomId, userId);
+        // return RoomData.deleteRoom(roomId, userId);
+        return false;
     }
 }

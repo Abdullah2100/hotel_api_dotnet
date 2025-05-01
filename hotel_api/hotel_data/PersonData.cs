@@ -259,8 +259,10 @@ namespace hotel_data
                         cmd.Parameters.AddWithValue("@phone", phone);
 
                         var result = cmd.ExecuteScalar();
-                        isExist = result != null && (bool)result;
-                        // using (var result = cmd.ExecuteReader())
+                        if (result != null && bool.TryParse(result.ToString(), out bool isExist_))
+                        {
+                            isExist = isExist_;
+                        }
                         // {
                         //     if (result.Read())
                         //         isExist = true;

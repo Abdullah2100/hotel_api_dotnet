@@ -7,7 +7,6 @@ public class BookingData
 {
     static string connectionUr = clsConnnectionUrl.url;
 
-
     public static BookingDto? getBooking(Guid bookingID)
     {
         BookingDto? bookingData = null;
@@ -80,8 +79,6 @@ public class BookingData
         return bookingData;
     }
 
-
-    
     public static bool createBooking(BookingDto bookingData)
     {
         bool isCreated = false;
@@ -200,12 +197,12 @@ public class BookingData
         return isUpdated;
     }
 
-  
-    
-    public static bool isValideBookingDate(
-        DateTime startBookingDate,
+    public static bool isValideBookingDate
+    ( 
+        DateTime startBookingDate, 
         DateTime endBookingDate, 
         Guid? guid
+        
         )
     {
         bool isVisibleBooking = false;
@@ -277,7 +274,6 @@ public class BookingData
 
         return bookingsDayAtYearAndMonth;
     }
-
 
     public static List<BookingDto> getUserBookingData(Guid userId, int pageNumber, int limitSize = 25)
     {
@@ -414,8 +410,5 @@ public class BookingData
         
         return bookingList;
     }
-    
-   
-    
     
 }

@@ -83,7 +83,9 @@ public class RoomController : ControllerBase
         if (result == false)
             return StatusCode(500, "some thing wrong");
 
-        return StatusCode(201, new { message = "created seccessfully" });
+        var roomNewInserted = roomHolder.getRoom();
+
+        return StatusCode( 201,roomNewInserted.roomHolder );
     }
 
 
@@ -291,7 +293,7 @@ public class RoomController : ControllerBase
             return StatusCode(400, "room not found");
 
 
-        var result = RoomBuisness.deleteRoom(room.ID, (Guid)adminid);
+        var result = RoomBuisness.deleteRoom((Guid)room.ID, (Guid)adminid);
 
         if (result == false)
             return StatusCode(500, "some thing wrong");

@@ -3,6 +3,7 @@ using Npgsql;
 
 namespace hotel_data;
 
+
 public class RoomData
 {
     static string connectionUr = clsConnnectionUrl.url;
@@ -16,18 +17,17 @@ public class RoomData
             using (var con = new NpgsqlConnection(connectionUr))
             {
                 con.Open();
-                string query = @"select * from rooms where roomid = @roomid";
+                string query = @"SELECT  * FROM getRoomsByID(@roomId_)";
 
                 using (var cmd = new NpgsqlCommand(query, con))
                 {
-                    cmd.Parameters.AddWithValue("@roomid", roomID);
+                    cmd.Parameters.AddWithValue("@roomId_", roomID);
                     using (var reader = cmd.ExecuteReader())
                     {
                         if (reader.HasRows)
                         {
                             if (reader.Read())
                             {
-                                string statusHolder = (string)reader["status"];
                                 room = new RoomDto(
                                     roomId:roomID,
                                     status: (string)reader["status"],
@@ -39,8 +39,11 @@ public class RoomData
                                     createdAt: (DateTime)reader["createdat"],
                                     isBlock: (bool)reader["isblock"],
                                     images:ImagesData.images(roomID,minioUrl),
-                                    isDeleted:(bool)reader["isdeleted"]
-                                    
+                                    isDeleted:(bool)reader["isdeleted"],
+                                    location:(string)reader["place"],
+                                    longitude:(double)reader["longitude"],
+                                    latitude:(double)reader["latitude"]
+                                
                                 );
                             }
                         }
@@ -93,12 +96,12 @@ public class RoomData
     }
 
 
-    public static bool createRoom
+    public static Guid? createRoom
     (
         RoomDto roomData
     )
     {
-        bool isCration = false;
+        Guid? roomId = null;
         try
         {
             using (var con = new NpgsqlConnection(connectionUr))
@@ -106,28 +109,49 @@ public class RoomData
                 con.Open();
                 string query = @"select * from fn_room_insert_new
                                 (
-                                @roomid_u::UUID,
+                                @roomid_::UUID,
                                @status::VARCHAR,
                                @pricePerNight_::NUMERIC,
                                @roomtypeid_ ,
                                @capacity_::INT ,
                                @bedNumber_::INT ,
-                               @belongTo_
+                               @belongTo_ ,
+                               ST_SetSRID(ST_MakePoint(@latitude ,@longitude),4326),
+                               @place
                                 )";
 
                 using (var cmd = new NpgsqlCommand(query, con))
                 {
-                    cmd.Parameters.AddWithValue("@roomid_u",roomData.roomId);
+                    cmd.Parameters.AddWithValue("@roomid_",roomData.roomId);
                     cmd.Parameters.AddWithValue("@status",roomData.status??"Available");
                     cmd.Parameters.AddWithValue("@pricePerNight_", roomData.pricePerNight);
                     cmd.Parameters.AddWithValue("@roomtypeid_", roomData.roomtypeid);
                     cmd.Parameters.AddWithValue("@capacity_", roomData.capacity);
                     cmd.Parameters.AddWithValue("@bedNumber_", roomData.bedNumber);
                     cmd.Parameters.AddWithValue("@belongTo_", roomData.beglongTo);
-                    var reader = cmd.ExecuteScalar();
-                    if (reader != null && int.TryParse(reader.ToString(),out int result))
+                    
+                    if (roomData.longitude != null)
                     {
-                        isCration = result>0?true:false;
+                        cmd.Parameters.AddWithValue("@longitude", roomData.longitude);
+                    }
+                    else cmd.Parameters.AddWithValue("@longitude", DBNull.Value); 
+                    
+                    if (roomData.latitude != null)
+                    {
+                        cmd.Parameters.AddWithValue("@latitude", roomData.latitude);
+                    }
+                    else cmd.Parameters.AddWithValue("@latitude", DBNull.Value); 
+                    
+                    if (roomData.location != null)
+                    {
+                        cmd.Parameters.AddWithValue("@place", roomData.location);
+                    }
+                    else cmd.Parameters.AddWithValue("@place", DBNull.Value); 
+                    
+                    var reader = cmd.ExecuteScalar();
+                    if (reader != null && Guid.TryParse(reader.ToString(),out Guid result))
+                    {
+                        roomId = result;
                     }
                
                 }
@@ -139,7 +163,7 @@ public class RoomData
            
         }
 
-        return isCration;
+        return roomId;
     }
     
     
