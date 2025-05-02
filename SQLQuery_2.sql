@@ -767,6 +767,7 @@ $$ LANGUAGE plpgsql;
 ----
 
 ----
+
 ----
 CREATE OR REPLACE FUNCTION fn_room_insert_new(
          room_id UUID,
