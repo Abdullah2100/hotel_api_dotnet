@@ -674,8 +674,8 @@ rom.roomid,
     ST_X(rom.location)::NUMERIC as longitude,
     ST_Y(rom.location)::NUMERIC as latitude
 FROM rooms rom
-    INNER JOIN roomtypes romt ON rom.roomtypeid = romt.roomtypeid
-WHERE rom.isBlock = FALSE AND (belongId IS  NULL OR rom.belongTo=belongId)
+WHERE  (belongId IS NULL AND rom.isBlock = FALSE AND rom.isdeleted= FALSE) OR 
+(belongId IS NOT  NULL AND rom.belongTo=belongId)
 ORDER BY rom.CreatedAt DESC
 LIMIT limitNumber OFFSET limitNumber * (pageNumber - 1);
 EXCEPTION
@@ -699,9 +699,10 @@ SELECT
 END;
 $$ LANGUAGE plpgsql;
 
-----
-----
 
+
+----
+----
 CREATE OR REPLACE FUNCTION getRoomsByID(
 roomId_ UUID
 ) RETURNS TABLE(
@@ -718,9 +719,14 @@ roomId_ UUID
 		 place TEXT,
          longitude NUMERIC,
         latitude NUMERIC
-    ) AS $$ BEGIN
-
-
+    ) AS $$ 
+	
+DECLARE
+isAdmin BOOLEAN:=FALSE;
+BEGIN
+	IF userId_ IS NOT NULL THEN 
+		SELECT COUNT(*)>0 into isAdmin FROM users WHERE userid = userId_;
+	END IF ;
 RETURN QUERY SELECT
 rom.roomid,
     rom.Status,
@@ -737,7 +743,8 @@ rom.roomid,
     ST_Y(rom.location)::NUMERIC as latitude
 FROM rooms rom
 
-WHERE rom.isBlock = FALSE AND  rom.roomid=roomId_;
+WHERE   rom.roomid=roomId_ ;
+
 EXCEPTION
 WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
 SQLERRM;
@@ -759,6 +766,78 @@ SELECT
 END;
 $$ LANGUAGE plpgsql;
 ----
+
+----
+
+
+CREATE OR REPLACE FUNCTION getRoomsByPage_A(
+pageNumber INT,
+limitNumber INT,
+belongId UUID) RETURNS TABLE(
+        RoomID UUID,
+        Status VARCHAR(10),
+        pricePerNight NUMERIC(10, 2),
+        CreatedAt TIMESTAMP,
+        roomtypeid UUID,
+        capacity INT,
+        bedNumber INT,
+        belongTo UUID,
+        isblock Boolean,
+        isDeleted Boolean,
+        place TEXT,
+         longitude NUMERIC,
+        latitude NUMERIC
+    ) AS $$ BEGIN
+
+    IF pageNumber<1 THEN
+    	RAISE EXCEPTION 'the pageNumber is not valide ';
+    END IF;
+
+	IF EXISTS(
+     SELECT 1 FROM users WHERE userid = belongId AND role = 0
+	)THEN 
+  		    	RAISE EXCEPTION 'not valid user ';
+	END IF;
+
+RETURN QUERY SELECT
+rom.roomid,
+    rom.Status,
+    rom.pricepernight,
+    rom.CreatedAt,
+    rom.roomtypeid,
+    rom.capacity,
+    rom.bedNumber,
+    rom.belongTo
+    ,rom.isblock,
+    rom.isdeleted,
+    rom.place,
+    ST_X(rom.location)::NUMERIC as longitude,
+    ST_Y(rom.location)::NUMERIC as latitude
+FROM rooms rom
+ORDER BY rom.CreatedAt DESC
+LIMIT limitNumber OFFSET limitNumber * (pageNumber - 1);
+EXCEPTION
+WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+SQLERRM;
+RETURN QUERY
+SELECT 
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+
 
 ----
 ----

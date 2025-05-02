@@ -23,6 +23,7 @@ public class UserDto
     public string? imagePath { get; set; } = null;
 
     public bool? isUser { get; set; } = true;
+    public bool? isdeleted { get; set; } = false;
 
     public UserDto(
         Guid userId,
@@ -35,6 +36,7 @@ public class UserDto
         bool isDeleted=false,
         string? imagePath=null,
         bool?isUser=null,
+        bool?isdeleted=null,
         Guid? updatedBy=null
       )
     {
@@ -50,5 +52,6 @@ public class UserDto
         this.imagePath = imagePath;
         this.isUser = isUser??false;
         this.updatedBy = updatedBy;
+        this.isDeleted = isDeleted;
     }
 }

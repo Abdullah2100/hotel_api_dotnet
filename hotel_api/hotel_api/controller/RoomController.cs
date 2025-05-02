@@ -87,6 +87,59 @@ public class RoomController : ControllerBase
 
         return StatusCode( 201,roomNewInserted.roomHolder );
     }
+    
+    
+    [HttpGet("all/{pageNumber:int}")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> getRooms_al
+        (int pageNumber)
+    {
+        try
+        {
+            var authorizationHeader = HttpContext.Request.Headers["Authorization"];
+            var id = AuthinticationServices.GetPayloadFromToken("id",
+                authorizationHeader.ToString().Replace("Bearer ", ""));
+            Guid? userID = null;
+            if (Guid.TryParse(id.Value.ToString(), out Guid outID))
+            {
+                userID = outID;
+            }
+
+            if (userID == null)
+            {
+                return StatusCode(401, "مشكلة في التحقق");
+            }
+
+            var user = UserBuissnes.getUserByID((Guid)userID);
+
+            if (user == null)
+            {
+                return StatusCode(401, "المستخدم غير موجود");
+            }
+            
+            if (user.isUser == true)
+            {
+                return StatusCode(401, "انت غير مصرح");
+            }
+            
+
+            var rooms = RoomBuisness.getAllRooms(
+                pageNumber,
+                25,
+                admin:(Guid) userID
+            );
+            return Ok(rooms);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, "Something went wrong");
+        }
+    }
+
+
 
 
     [HttpGet("me/{pageNumber:int}")]
@@ -110,8 +163,16 @@ public class RoomController : ControllerBase
 
             if (userID == null)
             {
-                return StatusCode(401, "you not have Permission");
+                return StatusCode(401, "مشكلة في التحقق");
             }
+
+            var user = UserBuissnes.getUserByID((Guid)userID);
+
+            if (user == null)
+            {
+                return StatusCode(401, "المستخدم غير موجود");
+            }
+            
 
             var rooms = RoomBuisness.getAllRooms(
                 pageNumber,
@@ -149,13 +210,20 @@ public class RoomController : ControllerBase
 
             if (userID == null)
             {
-                return StatusCode(401, "you not have Permission");
+                return StatusCode(401, "مشكلة في التحقق");
             }
+            var user = UserBuissnes.getUserByID((Guid)userID);
 
+            if (user == null)
+            {
+                return StatusCode(401, "المستخدم غير موجود");
+            }
+            
             var rooms = RoomBuisness.getAllRooms(
                 pageNumber,
                 25
             );
+            
             return Ok(rooms);
         }
         catch (Exception ex)
@@ -324,4 +392,6 @@ public class RoomController : ControllerBase
             return StatusCode(500, "هناك مشكلة ما");
         return StatusCode(200, new { message = "تم الحذف بنجاح" });
     }
+    
+    
 }

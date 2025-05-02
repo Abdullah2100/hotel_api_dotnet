@@ -13,6 +13,7 @@ public class UserBuissnes
     public DateTime? brithDay { get; set; }
     public bool? isVip { get; set; } = false;
     public bool? isUser { get; set; } = false;
+    public bool? isdeleted{ get; set; } = false;
     public PersonDto personData { get; set; }
     public string userName { get; set; }
     public string password { get; set; }
@@ -50,6 +51,7 @@ public class UserBuissnes
         this.imagePath = userData.imagePath;
         this.isUser = userData.isUser;
         this.updateBy = userData.updatedBy;
+        this.isdeleted=userData.isdeleted;
     }
 
     private bool _createUser()

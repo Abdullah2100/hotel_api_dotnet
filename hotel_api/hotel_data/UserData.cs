@@ -49,7 +49,8 @@ namespace hotel_data
                                         userName: (string)reader["username"],
                                         password: (string)(reader["password"]),
                                         imagePath:imageHolder==null?"":imageHolder.path,
-                                        isUser:((int)reader["role"])==0
+                                        isUser:((int)reader["role"])==0,
+                                        isdeleted:((bool)reader["isdeleted"])
                                     );
 
                                     return userData;
@@ -104,7 +105,8 @@ namespace hotel_data
                                         userName: (string)reader["username"],
                                         password: (string)(reader["password"]),
                                         imagePath:imageHolder==null?"":imageHolder.path,
-                                        isUser:((int)reader["role"])==0
+                                        isUser:((int)reader["role"])==0   , 
+                                        isdeleted:((bool)reader["isdeleted"])
 
                                             
                                     );
@@ -166,7 +168,9 @@ namespace hotel_data
                                         userName: userName,
                                         password: password,
                                         imagePath:imageHolder==null?"":imageHolder.path,
-                                        isUser:((int)reader["role"])==0
+                                        isUser:((int)reader["role"])==0,
+                                        isdeleted:((bool)reader["isdeleted"])
+
                                     );
 
                                     return userHolder;
@@ -220,7 +224,9 @@ namespace hotel_data
                                         password: "",
                                         isDeleted: (bool)reader["isdeleted"],
                                         imagePath:imageHolder==null?"":imageHolder.path,
-                                        isUser:((int)reader["role"])==0
+                                        isUser:((int)reader["role"])==0,
+                                        isdeleted:((bool)reader["isdeleted"])
+
                                     );
 
                                     users.Add(userHolder);
