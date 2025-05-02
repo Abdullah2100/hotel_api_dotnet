@@ -81,7 +81,7 @@ public class BookingData
 
     public static bool createBooking(BookingDto bookingData)
     {
-        bool isCreated = false;
+        Guid? bookingID = false;
         try
         {
             using (var con = new NpgsqlConnection(connectionUr))

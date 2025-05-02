@@ -9,7 +9,7 @@ public class RoomData
     static string connectionUr = clsConnnectionUrl.url;
     private static string minioUrl = clsConnnectionUrl.minIoConnectionUrl + "room/";
 
-    public static RoomDto? getRoom(Guid roomID, Guid? userId=null)
+    public static RoomDto? getRoom(Guid roomID)
     {
         RoomDto? room = null;
         try
@@ -17,14 +17,12 @@ public class RoomData
             using (var con = new NpgsqlConnection(connectionUr))
             {
                 con.Open();
-                string query = @"SELECT  * FROM getRoomsByID(@roomId_ ,@userid_)";
+                string query = @"SELECT  * FROM getRoomsByID(@roomId_ )";
 
                 using (var cmd = new NpgsqlCommand(query, con))
                 {
                     cmd.Parameters.AddWithValue("@roomId_", roomID);
-                    if(userId==null)cmd.Parameters.AddWithValue("@userid_", DBNull.Value);
-                    else cmd.Parameters.AddWithValue("@userid_", userId);
-                    using (var reader = cmd.ExecuteReader())
+                      using (var reader = cmd.ExecuteReader())
                     {
                         if (reader.HasRows)
                         {
@@ -61,6 +59,9 @@ public class RoomData
 
         return room;
     }
+
+    
+
 
     public static bool isExist(Guid roomID)
     {
@@ -252,30 +253,79 @@ public class RoomData
                 {
                     con.Open();
                     
-                    string query="";
-                    switch (userId==null)
-                    {
-                        case true:
-                        {
-                            
-                           query = @"select * from  getRoomsByPage(@pagenumber,@limitnumber)";
- 
-                        }
-                            break;
-                        default:
-                        {
-                            query= @"select * from  getRoomsByPage(@pagenumber,@limitnumber,@belongId)";
+                    string  query= @"select * from  getRoomsByPage(@pagenumber,@limitnumber,@belongId)";
 
-                        }
-                            break;
-                        
-                    }
 
                     using (var cmd = new NpgsqlCommand(query, con))
                     {
                         cmd.Parameters.AddWithValue("@pagenumber", pageNumber <= 1 ? 1 : pageNumber - 1);
                         cmd.Parameters.AddWithValue("@limitnumber", numberOfRoom);
+                      
                         if (userId != null)
+                            cmd.Parameters.AddWithValue("@belongId", userId);
+                         else    cmd.Parameters.AddWithValue("@belongId", DBNull.Value);
+
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            if (reader.HasRows)
+                            {
+                                while (reader.Read())
+                                {
+                                    var roomid = (Guid)reader["roomid"];
+                                var roomHolder =     new RoomDto(
+                                        roomId:roomid,
+                                        status: (string)reader["status"],
+                                        pricePerNight: (decimal)reader["pricepernight"],
+                                        capacity: (int)reader["capacity"],
+                                        roomtypeid: (Guid)reader["roomtypeid"],
+                                        bedNumber: (int)reader["bednumber"],
+                                        beglongTo:(Guid)reader["belongto"],
+                                        createdAt: (DateTime)reader["createdat"],
+                                        isBlock: (bool)reader["isblock"],
+                                        images:ImagesData.images(roomid,minioUrl),
+                                        isDeleted:(bool)reader["isdeleted"],
+                                        latitude:(decimal)reader["latitude"],
+                                        longitude:(decimal)reader["longitude"],
+                                        location:(string)reader["place"]
+                                    );
+
+                                    rooms.Add(roomHolder);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("this from getting user by id error {0}", ex.Message);
+                return null;
+            }
+
+            return rooms;
+        }
+
+   
+        public static List<RoomDto> getRoomByPage(
+            Guid userId
+            ,int pageNumber = 1,
+         int numberOfRoom = 20
+     )
+        {
+            List<RoomDto> rooms = new List<RoomDto>();
+            try
+            {
+                using (var con = new NpgsqlConnection(connectionUr))
+                {
+                    con.Open();
+                    
+                    string  query= @"select * from  getRoomsByPage_A(@pagenumber,@limitnumber,@belongId)";
+
+
+                    using (var cmd = new NpgsqlCommand(query, con))
+                    {
+                        cmd.Parameters.AddWithValue("@pagenumber", pageNumber <= 1 ? 1 : pageNumber - 1);
+                        cmd.Parameters.AddWithValue("@limitnumber", numberOfRoom);
                             cmd.Parameters.AddWithValue("@belongId", userId);
 
                         using (var reader = cmd.ExecuteReader())
@@ -296,7 +346,10 @@ public class RoomData
                                         createdAt: (DateTime)reader["createdat"],
                                         isBlock: (bool)reader["isblock"],
                                         images:ImagesData.images(roomid,minioUrl),
-                                        isDeleted:(bool)reader["isdeleted"]
+                                        isDeleted:(bool)reader["isdeleted"],
+                                        latitude:(decimal)reader["latitude"],
+                                        longitude:(decimal)reader["longitude"],
+                                        location:(string)reader["place"]
                                     );
 
                                     rooms.Add(roomHolder);
@@ -315,7 +368,7 @@ public class RoomData
             return rooms;
         }
 
-    
+  
     
   
     public static bool deleteRoom

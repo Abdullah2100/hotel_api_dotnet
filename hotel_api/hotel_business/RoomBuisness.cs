@@ -102,12 +102,24 @@ public class RoomBuisness
         Guid? userId=null
         )
     {
-        // return RoomData.getRoomByPage(
-        //     pagenumber, 
-        //     limitPerPage,
-        //     userId
-        //     );
-        return null;
+        return RoomData.getRoomByPage(
+            pagenumber, 
+            limitPerPage,
+            userId
+            );
+    }
+    
+    public static List<RoomDto>? getAllRooms(
+        int pagenumber,
+        int limitPerPage,
+        Guid admin
+    )
+    {
+        return RoomData.getRoomByPage(
+           pageNumber: pagenumber, 
+           numberOfRoom: limitPerPage,
+          userId: admin 
+        );
     }
 
     public  RoomBuisness? getRoom()
@@ -118,7 +130,7 @@ public class RoomBuisness
     }
     public static RoomBuisness? getRoom(Guid roomId, Guid? userId = null)
     {
-        var result = RoomData.getRoom(roomId, userId);
+        var result = RoomData.getRoom(roomId);
         if (result != null) return new RoomBuisness(result, enMode.update);
         return null;
     }

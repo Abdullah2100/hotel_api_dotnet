@@ -12,6 +12,92 @@ namespace hotel_api.controller;
 public class BookingController : ControllerBase
 {
     
+     [HttpPut("")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public IActionResult createBooking
+        (BookingRequestDto bookingData)
+    {
+        var authorizationHeader = HttpContext.Request.Headers["Authorization"];
+        var id = AuthinticationServices.GetPayloadFromToken("id",
+            authorizationHeader.ToString().Replace("Bearer ", ""));
+        Guid? userID = null;
+        if (Guid.TryParse(id.Value.ToString(), out Guid outID))
+        {
+            userID = outID;
+        }
+
+        if (userID == null)
+        {
+            return StatusCode(401, "ليس لديك الصلاحية");
+        }
+
+        var user = UserBuissnes.getUserByID((Guid)userID!);
+        
+        if (user == null)
+        {
+            return StatusCode(401, "المستخدم غير موجود");
+        }
+        if (user.isUser==true && user.isdeleted==true)
+        {
+            return StatusCode(401, "تواصل مغ مدير النظام لحل المشكلة");
+        }
+
+        var isVisibleBooking =
+            BookingBuiseness.isValidBooking(
+                bookingData.bookingStartDateTime,
+                bookingData.bookingEndDateTime,
+                userID
+            );
+
+        if (!isVisibleBooking)
+            return BadRequest("هناك حجز ضمن الفترة المختارة");
+
+        var bookingFullDate = (bookingData.bookingEndDateTime - bookingData.bookingStartDateTime);
+
+        if (bookingFullDate.Days == 0)
+        {
+            return BadRequest("booking at least one day is required");
+        }
+
+        var bookingDayes = Convert.ToDecimal(bookingFullDate.Days);
+
+        var room = RoomBuisness.getRoom(bookingData.roomId);
+
+        if (room.beglongTo == userID)
+            return BadRequest("لا يمكن حجز غرفة انت صاحبها");
+
+        var totalPriceHolder = (bookingDayes * room.pricePerNight);
+
+        var bookingDto = new BookingDto(
+            bookingId: null,
+            roomId: bookingData.roomId,
+            userId: (Guid)userID!,
+            bookingStart: bookingData.bookingStartDateTime,
+            bookingEnd: bookingData.bookingEndDateTime,
+            bookingStatus: null,
+            totalPrice: totalPriceHolder,
+            servicePayment: null,
+            maintenancePayment: null,
+            paymentStatus: "",
+            createdAt: null,
+            cancelledAt: null,
+            cancellationReason: null,
+            actualCheckOut: null
+        );
+        var newBooking = new BookingBuiseness(bookingDto);
+        var result =newBooking.save();
+
+        if (result == false)
+            return StatusCode(500, "هناك مشكلة ما");
+
+        var bookingData = bookingData.get
+        return StatusCode(200,);
+    }
+
+ 
     [HttpPut("")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
