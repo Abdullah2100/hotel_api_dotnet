@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace hotel_api.controller;
 
+[Authorize]
 [ApiController]
 [Route("api/room")]
 public class RoomController : ControllerBase
