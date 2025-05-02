@@ -9,7 +9,7 @@ public class RoomData
     static string connectionUr = clsConnnectionUrl.url;
     private static string minioUrl = clsConnnectionUrl.minIoConnectionUrl + "room/";
 
-    public static RoomDto? getRoom(Guid roomID)
+    public static RoomDto? getRoom(Guid roomID, Guid? userId=null)
     {
         RoomDto? room = null;
         try
@@ -17,11 +17,13 @@ public class RoomData
             using (var con = new NpgsqlConnection(connectionUr))
             {
                 con.Open();
-                string query = @"SELECT  * FROM getRoomsByID(@roomId_)";
+                string query = @"SELECT  * FROM getRoomsByID(@roomId_ ,@userid_)";
 
                 using (var cmd = new NpgsqlCommand(query, con))
                 {
                     cmd.Parameters.AddWithValue("@roomId_", roomID);
+                    if(userId==null)cmd.Parameters.AddWithValue("@userid_", DBNull.Value);
+                    else cmd.Parameters.AddWithValue("@userid_", userId);
                     using (var reader = cmd.ExecuteReader())
                     {
                         if (reader.HasRows)
@@ -329,7 +331,7 @@ public class RoomData
             {
                 
                 con.Open();
-                string query = @"select * from room_delete
+                string query = @"select * from  blockRoom
                                 (
                                @roomid::UUID,
                                @userid::UUID 
