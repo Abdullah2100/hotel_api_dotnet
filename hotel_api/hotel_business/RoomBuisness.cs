@@ -17,8 +17,10 @@ public class RoomBuisness
     public int bedNumber { get; set; }
     public Guid beglongTo { get; set; }
     public string? location  {get; set; }
-    public double? latitude { get; set; }
-    public double? longitude { get; set; }
+    public decimal? latitude { get; set; }
+    public decimal? longitude { get; set; }
+    public bool? isBlocked { get; set; }
+    public bool? isDeleted { get; set; }
 
     public RoomDto roomHolder
     {
@@ -56,6 +58,8 @@ public class RoomBuisness
         this.location=roomData.location;
         this.longitude = roomData.longitude;
         this.latitude = roomData.latitude;
+        this.isDeleted = roomData.isDeleted;
+        this.isBlocked = roomData.isBlock;
         this.mode = mode;
     }
 
@@ -68,8 +72,8 @@ public class RoomBuisness
 
     private bool _update()
     {
-        // bool isUpdate = RoomData.u(roomHolder);
-        //return isUpdate;
+        bool isUpdate = RoomData.updateRoom(roomHolder);
+        return isUpdate;
         return false;
     }
 

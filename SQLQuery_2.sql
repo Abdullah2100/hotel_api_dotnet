@@ -651,8 +651,8 @@ belongId UUID) RETURNS TABLE(
         isblock Boolean,
         isDeleted Boolean,
         place TEXT,
-         longitude FLOAT,
-        latitude FLOAT
+         longitude NUMERIC,
+        latitude NUMERIC
     ) AS $$ BEGIN
 
     IF pageNumber<1 THEN
@@ -671,12 +671,10 @@ rom.roomid,
     ,rom.isblock,
     rom.isdeleted,
     rom.place,
-    ST_X(romlocation)::FLOAT as longitude,
-    ST_X(romlocation)::FLOAT as latitude
+    ST_X(rom.location)::NUMERIC as longitude,
+    ST_Y(rom.location)::NUMERIC as latitude
 FROM rooms rom
     INNER JOIN roomtypes romt ON rom.roomtypeid = romt.roomtypeid
-    LEFT JOIN users usr ON rom.belongto = usr.userid
-    LEFT JOIN admins adms ON rom.belongto = adms.adminid
 WHERE rom.isBlock = FALSE AND (belongId IS  NULL OR rom.belongTo=belongId)
 ORDER BY rom.CreatedAt DESC
 LIMIT limitNumber OFFSET limitNumber * (pageNumber - 1);
@@ -700,8 +698,10 @@ SELECT
     NULL;
 END;
 $$ LANGUAGE plpgsql;
+
 ----
 ----
+
 CREATE OR REPLACE FUNCTION getRoomsByID(
 roomId_ UUID
 ) RETURNS TABLE(
@@ -716,8 +716,8 @@ roomId_ UUID
         isblock BOOLEAN,
         isDeleted BOOLEAN,
 		 place TEXT,
-         longitude FLOAT,
-        latitude FLOAT
+         longitude NUMERIC,
+        latitude NUMERIC
     ) AS $$ BEGIN
 
 
@@ -733,8 +733,8 @@ rom.roomid,
     ,rom.isblock,
     rom.isdeleted,
 	rom.place,
-    ST_X(rom.location)::FLOAT as longitude,
-    ST_X(rom.location)::FLOAT as latitude
+    ST_X(rom.location)::NUMERIC as longitude,
+    ST_Y(rom.location)::NUMERIC as latitude
 FROM rooms rom
 
 WHERE rom.isBlock = FALSE AND  rom.roomid=roomId_;
@@ -835,16 +835,27 @@ $$ LANGUAGE PLPGSQL;
 
 ---
 ----
+
 CREATE OR REPLACE FUNCTION fn_room_update_new(
         roomid_ UUID,
         status_ VARCHAR(10),
         pricePerNight_ NUMERIC(10, 2),
         roomtypeid_ UUID,
         capacity_ INT,
-        bedNumber_ INT
+        bedNumber_ INT,
+        belongTo_ UUID,
+        location_ GEOMETRY ,
+        place_ text 
     ) RETURNS Boolean AS $$
 DECLARE updateAt_holder TIMESTAMP;
 BEGIN
+    IF EXISTS(
+	 SELECT 1 FROM rooms WHERE roomid=roomid_
+	 AND belongTo <> belongTo_
+	) THEN
+     RAISE EXCEPTION 'only room owner can update room data';
+	END IF ;
+
     UPDATE rooms
     SET Status = CASE
             WHEN status <> status_
@@ -871,6 +882,17 @@ BEGIN
             AND bedNumber_ IS NOT NULL THEN bedNumber_
             ELSE  bedNumber
         END,
+		location= CASE
+            WHEN location_ <>  location
+            AND location_ IS NOT NULL THEN location_
+            ELSE  location
+        END,
+		place=CASE
+            WHEN place_ <>  place
+            AND place_ IS NOT NULL THEN place_
+            ELSE  place
+        END
+		,
         updateAt = CURRENT_TIMESTAMP
     WHERE roomid = roomid_;
     SELECT updateAt INTO updateAt_holder

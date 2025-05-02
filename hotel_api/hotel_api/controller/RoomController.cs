@@ -165,14 +165,13 @@ public class RoomController : ControllerBase
     }
 
 
-    [HttpPut("{roomId:guid}")]
+    [HttpPut()]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> updateRoom
-    ([FromForm] RoomRequestUpdateDto roomData,
-        Guid roomId
+    ([FromForm] RoomRequestUpdateDto roomData
     )
     {
         var authorizationHeader = HttpContext.Request.Headers["Authorization"];
@@ -189,18 +188,19 @@ public class RoomController : ControllerBase
             return StatusCode(401, "you not have Permission");
         }
 
-        // var isHasPermissionToCurd = AdminBuissnes.isAdminExist(adminid ?? Guid.Empty);
-
-
-        // if (!isHasPermissionToCurd)
-        // {
-        //     return StatusCode(401, "you not have Permission");
-        // }
-
-        var room = RoomBuisness.getRoom(roomId);
+        
+      
+            var room = RoomBuisness.getRoom(roomData.id);
 
         if (room == null)
-            return StatusCode(400, "room not found");
+            return StatusCode(400, "الغرفة غير موجودة");
+        
+        if(room.beglongTo!=adminid)
+            return StatusCode(400, "صاحب الغرفة فقط من يمكنه تعديل البيانات");
+
+        
+        if (room.isDeleted==true||room.isBlocked==true)
+            return StatusCode(400, "لا يمكن تعديل بيانات الغرفة لا بد من التاكد من وجود هذه الغرفة او تغير حالتها");
 
 
         List<ImageRequestDto>? imageHolderPath = null;
@@ -210,12 +210,12 @@ public class RoomController : ControllerBase
                 _config,
                 roomData.images,
                 MinIoServices.enBucketName.ROOM,
-                roomId.ToString()
+                roomData.id.ToString()
             );
         }
 
         if (imageHolderPath != null)
-            clsUtil.saveImage(imageHolderPath, roomId);
+            clsUtil.saveImage(imageHolderPath, roomData.id);
         _updateRoomData(ref room, roomData);
 
         var result = room.save();
@@ -223,35 +223,59 @@ public class RoomController : ControllerBase
         if (result == false)
             return StatusCode(500, "some thing wrong");
 
-        return StatusCode(200, new { message = "update seccessfully" });
+        var newRoomUpdateData = room.getRoom();
+        return StatusCode(200, newRoomUpdateData.roomHolder);
     }
-
+    
     private void _updateRoomData(ref RoomBuisness roomData, RoomRequestUpdateDto newRoomData)
     {
-        if (newRoomData.status != null && roomData.status != newRoomData.status)
+        if (newRoomData.status != null && newRoomData.status.Trim().Length >0 &&roomData.status != newRoomData.status)
         {
             roomData.status = newRoomData.status;
         }
+        else
+        {
+            roomData.status = "";
+        }
 
-        if (newRoomData.pricePerNight != null && newRoomData.pricePerNight != roomData.pricePerNight)
+        if (newRoomData.pricePerNight != null && newRoomData.pricePerNight!=0 &&newRoomData.pricePerNight != roomData.pricePerNight)
         {
             roomData.pricePerNight = (int)newRoomData.pricePerNight;
         }
+        else roomData.pricePerNight = 0;
 
-        if (newRoomData.bedNumber != null && newRoomData.bedNumber != roomData.bedNumber)
+        if (newRoomData.bedNumber != null &&newRoomData.bedNumber != 0 && newRoomData.bedNumber != roomData.bedNumber)
         {
             roomData.bedNumber = (int)newRoomData.bedNumber;
-        }
+        }else roomData.bedNumber = 0;
 
         if (newRoomData.roomtypeid != null && newRoomData.roomtypeid != roomData.roomtypeid)
         {
             roomData.roomtypeid = (Guid)newRoomData.roomtypeid;
         }
+        else roomData.roomtypeid = Guid.Empty;
 
-        if (newRoomData.capacity != null && newRoomData.capacity != roomData.capacity)
+        if (newRoomData.capacity != null && newRoomData.capacity != 0 &&newRoomData.capacity != roomData.capacity)
         {
             roomData.capacity = (int)newRoomData.capacity;
         }
+        else roomData.capacity = 0;
+
+        if (newRoomData.longitude != null && newRoomData.longitude!=0 &&  newRoomData.longitude != roomData.longitude)
+        {
+            roomData.longitude = newRoomData.longitude;
+        }
+
+        if (newRoomData.latitude != null&& newRoomData.latitude!=0 && roomData.latitude != newRoomData.latitude)
+        {
+            roomData.latitude = newRoomData.latitude;
+        }
+        
+        if (newRoomData.location!= null&&newRoomData.location.Trim().Length>0 && roomData.location != roomData.location)
+        {
+            roomData.location = newRoomData.location;
+        }
+        else roomData.location = null;
     }
 
 
