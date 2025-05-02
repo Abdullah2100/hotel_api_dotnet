@@ -700,10 +700,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 ----
-----
-
-CREATE OR REPLACE FUNCTION getRoomsByID(
-roomId_ UUID
+----CREATE OR REPLACE FUNCTION getRoomsByID(
+roomId_ UUID,
+userId_ UUID
 ) RETURNS TABLE(
         RoomID UUID,
         Status VARCHAR(10),
@@ -718,9 +717,14 @@ roomId_ UUID
 		 place TEXT,
          longitude NUMERIC,
         latitude NUMERIC
-    ) AS $$ BEGIN
-
-
+    ) AS $$ 
+	
+DECLARE
+isAdmin BOOLEAN:=FALSE;
+BEGIN
+	IF userId_ IS NOT NULL THEN 
+		SELECT role = 1 into isAdmin FROM users WHERE userid = userId_;
+	END IF ;
 RETURN QUERY SELECT
 rom.roomid,
     rom.Status,
@@ -737,7 +741,9 @@ rom.roomid,
     ST_Y(rom.location)::NUMERIC as latitude
 FROM rooms rom
 
-WHERE rom.isBlock = FALSE AND  rom.roomid=roomId_;
+WHERE   rom.roomid=roomId_ AND 
+(((isAdmin IS  NULL OR isAdmin=FALSE) AND rom.isblock =FALSE)OR (isAdmin=TRUE));
+
 EXCEPTION
 WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
 SQLERRM;
