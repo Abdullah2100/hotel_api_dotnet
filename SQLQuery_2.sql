@@ -1147,9 +1147,10 @@ CREATE OR REPLACE FUNCTION fn_bookin_insert(
     userid_ UUID,
     startbookindate_ TIMESTAMP,
     endbookingdate_ TIMESTAMP
-) RETURNS BOOLEAN AS $$
+) RETURNS UUID AS $$
 DECLARE
     isNotDeletion Boolean;
+	bookingId UUID ;
 BEGIN
 
 IF startbookindate_ < CURRENT_TIMESTAMP THEN
@@ -1183,14 +1184,14 @@ INSERT INTO bookings(
     totalprice_,
     startbookindate_ ,
     endbookingdate_
-);
+) returning bookingid into bookingId;
 
 
-RETURN TRUE;
+RETURN bookingId;
 EXCEPTION
 WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
 SQLERRM;
-RETURN FALSE;
+RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
 -----
@@ -1198,6 +1199,7 @@ $$ LANGUAGE plpgsql;
 
 -----
 -----
+
 
 CREATE OR REPLACE FUNCTION fn_bookin_update(
     booking_id UUID,  

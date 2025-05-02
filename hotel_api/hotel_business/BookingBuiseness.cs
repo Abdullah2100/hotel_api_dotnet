@@ -68,7 +68,8 @@ public class BookingBuiseness
 
     private bool _createBooking()
     {
-        return BookingData.createBooking(this.booking);
+        this.ID= BookingData.createBooking(this.booking);
+        return (ID != null);
     }
     
     private bool _updateBooking()
@@ -120,6 +121,16 @@ public class BookingBuiseness
                 case true: return BookingData.getBookingBelongToUserRoomData(userId, pageNumber, limitSize);
                 default: return BookingData.getUserBookingData(userId, pageNumber, limitSize);
             }
+        }
+
+        public  BookingBuiseness getBooking()
+        {
+            var result = BookingData.getBooking((Guid)this.ID!);
+            if (result != null)
+            {
+                return new  BookingBuiseness(result, enMode.update);
+            }
+            return null ;
         }
 
 

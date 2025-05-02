@@ -78,10 +78,11 @@ public class BookingData
 
         return bookingData;
     }
+    
 
-    public static bool createBooking(BookingDto bookingData)
+    public static Guid? createBooking(BookingDto bookingData)
     {
-        Guid? bookingID = false;
+        Guid? bookingID=null ;
         try
         {
             using (var con = new NpgsqlConnection(connectionUr))
@@ -101,7 +102,10 @@ public class BookingData
                     cmd.Parameters.AddWithValue("@endbookingdate_", bookingData.bookingEnd);
 
                     var result = cmd.ExecuteScalar();
-                    isCreated = result != null && (bool)result;
+                    if (result != null && Guid.TryParse(result?.ToString(), out Guid bookingIDResult))
+                    {
+                    bookingID = bookingIDResult;        
+                    }
                 }
             }
         }
@@ -110,7 +114,7 @@ public class BookingData
             Console.WriteLine("Error creating booking: {0}", ex);
         }
 
-        return isCreated;
+        return bookingID;
     }
 
     public static bool updateBooking(BookingDto bookingData)

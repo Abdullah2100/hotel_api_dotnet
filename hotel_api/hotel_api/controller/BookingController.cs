@@ -7,12 +7,15 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace hotel_api.controller;
 
+
+[Authorize]
 [ApiController]
 [Route("api/booking")]
 public class BookingController : ControllerBase
 {
     
-     [HttpPut("")]
+
+     [HttpPost("")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -48,8 +51,7 @@ public class BookingController : ControllerBase
         var isVisibleBooking =
             BookingBuiseness.isValidBooking(
                 bookingData.bookingStartDateTime,
-                bookingData.bookingEndDateTime,
-                userID
+                bookingData.bookingEndDateTime
             );
 
         if (!isVisibleBooking)
@@ -68,6 +70,9 @@ public class BookingController : ControllerBase
 
         if (room.beglongTo == userID)
             return BadRequest("لا يمكن حجز غرفة انت صاحبها");
+        
+        if (room.isDeleted==true||room.isBlocked==true)
+            return BadRequest("لا يمكن حجز هذه الغرفة الراجاء اختيار غرفة اخرى للحجز");
 
         var totalPriceHolder = (bookingDayes * room.pricePerNight);
 
@@ -93,8 +98,8 @@ public class BookingController : ControllerBase
         if (result == false)
             return StatusCode(500, "هناك مشكلة ما");
 
-        var bookingData = bookingData.get
-        return StatusCode(200,);
+        var bookingDataResult = newBooking.getBooking();
+        return StatusCode(200,bookingDataResult.booking);
     }
 
  
@@ -160,6 +165,9 @@ public class BookingController : ControllerBase
 
         if (room.beglongTo == userID)
             return BadRequest("لا يمكن حجز غرفة انت صاحبها");
+        
+        if (room.isDeleted==true||room.isBlocked==true)
+            return BadRequest("لا يمكن تعديل الحجز لهذه الغرفة");
 
         var totalPriceHolder = (bookingDayes * room.pricePerNight);
 
