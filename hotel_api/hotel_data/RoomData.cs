@@ -41,8 +41,8 @@ public class RoomData
                                     images:ImagesData.images(roomID,minioUrl),
                                     isDeleted:(bool)reader["isdeleted"],
                                     location:(string)reader["place"],
-                                    longitude:(double)reader["longitude"],
-                                    latitude:(double)reader["latitude"]
+                                    longitude:(decimal)reader["longitude"],
+                                    latitude:(decimal)reader["latitude"]
                                 
                                 );
                             }
@@ -186,17 +186,42 @@ public class RoomData
                                @pricePerNight_::NUMERIC,
                                @roomtypeid_::UUID ,
                                @capacity_::INT ,
-                               @bedNumber_::INT
+                               @bedNumber_::INT,
+                                @belongTo_,
+                                ST_SetSRID(ST_MakePoint(@longitude,@latitude),4326) ,
+                                @place_ 
                                 )";
                 
                 using (var cmd = new NpgsqlCommand(query, con))
                 {
                     cmd.Parameters.AddWithValue("@roomid_", roomData.roomId);
-                    cmd.Parameters.AddWithValue("@status", roomData.status);
-                    cmd.Parameters.AddWithValue("@pricePerNight_", roomData.pricePerNight);
-                    cmd.Parameters.AddWithValue("@roomtypeid_", roomData.roomtypeid);
-                    cmd.Parameters.AddWithValue("@capacity_", roomData.capacity);
-                    cmd.Parameters.AddWithValue("@bedNumber_", roomData.bedNumber);
+                    if(roomData.status==null||roomData.status=="") cmd.Parameters.AddWithValue("@status", DBNull.Value);
+                    else cmd.Parameters.AddWithValue("@status", roomData.status);
+                    
+                   if(roomData.pricePerNight==0) cmd.Parameters.AddWithValue("@pricePerNight_", DBNull.Value);
+                   else  cmd.Parameters.AddWithValue("@pricePerNight_", roomData.pricePerNight);
+                   
+                    
+                    if(roomData.roomtypeid==Guid.Empty)cmd.Parameters.AddWithValue("@roomtypeid_", DBNull.Value);
+                    else  cmd.Parameters.AddWithValue("@roomtypeid_", roomData.roomtypeid);
+                    
+                    if(roomData.capacity==0) cmd.Parameters.AddWithValue("@capacity_", DBNull.Value);
+                     else cmd.Parameters.AddWithValue("@capacity_", roomData.capacity);
+                     
+                    if(roomData.bedNumber==0)cmd.Parameters.AddWithValue("@bedNumber_",DBNull.Value );
+                    else  cmd.Parameters.AddWithValue("@bedNumber_", roomData.bedNumber);
+                    
+                    cmd.Parameters.AddWithValue("@belongTo_", roomData.beglongTo);
+                    
+                    if(roomData.latitude==null)cmd.Parameters.AddWithValue("@latitude",DBNull.Value );
+                    else  cmd.Parameters.AddWithValue("@latitude", roomData.latitude);
+                    
+                    if(roomData.longitude==null)cmd.Parameters.AddWithValue("@longitude",DBNull.Value );
+                    else  cmd.Parameters.AddWithValue("@longitude", roomData.longitude);
+                    
+                    if(roomData.location==null)cmd.Parameters.AddWithValue("@place_",DBNull.Value );
+                    else  cmd.Parameters.AddWithValue("@place_", roomData.location);
+                    
                     var reader = cmd.ExecuteScalar();
                     if (reader != null && bool.TryParse(reader.ToString(),out bool result))
                     {

@@ -14,8 +14,8 @@ public class RoomDto
         bool isBlock = false,
         bool isDeleted = false,
         string? location = null,
-        double? latitude = null,
-        double? longitude = null,
+        decimal? latitude = null,
+        decimal? longitude = null,
         List<ImagesTbDto>? images = null
     )
     {
@@ -58,6 +58,6 @@ public class RoomDto
 
     public List<ImagesTbDto>? images { get; set; }
     public string? location { get; set; }
-    public double? latitude { get; set; }
-    public double? longitude { get; set; }
+    public decimal? latitude { get; set; }
+    public decimal? longitude { get; set; }
 }
