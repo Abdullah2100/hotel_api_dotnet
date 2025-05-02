@@ -116,16 +116,15 @@ public class RoomBuisness
         if (result != null) return new RoomBuisness(result, enMode.update);
         return null;
     }
-    public static RoomBuisness? getRoom(Guid roomId)
+    public static RoomBuisness? getRoom(Guid roomId, Guid? userId = null)
     {
-        var result = RoomData.getRoom(roomId);
+        var result = RoomData.getRoom(roomId, userId);
         if (result != null) return new RoomBuisness(result, enMode.update);
         return null;
     }
 
     public static bool deleteRoom(Guid roomId, Guid userId)
     {
-        // return RoomData.deleteRoom(roomId, userId);
-        return false;
+        return RoomData.deleteRoom(roomId, userId);
     }
 }

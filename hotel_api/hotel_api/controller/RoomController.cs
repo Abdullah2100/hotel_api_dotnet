@@ -292,35 +292,36 @@ public class RoomController : ControllerBase
         var authorizationHeader = HttpContext.Request.Headers["Authorization"];
         var id = AuthinticationServices.GetPayloadFromToken("id",
             authorizationHeader.ToString().Replace("Bearer ", ""));
-        Guid? adminid = null;
+        Guid? userID = null;
         if (Guid.TryParse(id.Value.ToString(), out Guid outID))
         {
-            adminid = outID;
+            userID = outID;
         }
 
-        if (adminid == null)
+        if (userID == null)
         {
-            return StatusCode(401, "you not have Permission");
+            return StatusCode(401, "مشكلة في التحقق");
         }
 
-        // var isHasPermissionToCurd = AdminBuissnes.isAdminExist(adminid ?? Guid.Empty);
+        var user = UserBuissnes.getUserByID((Guid)userID!);
+        
+        if(user==null)
+            return StatusCode(401, "المتستخدم غير موجود");
 
 
-        // if (!isHasPermissionToCurd)
-        // {
-        //     return StatusCode(401, "you not have Permission");
-        // }
-
-        var room = RoomBuisness.getRoom(roomId);
+        var room = RoomBuisness.getRoom(roomId,userID);
 
         if (room == null)
-            return StatusCode(400, "room not found");
+            return StatusCode(400, "الغرفة غير موجودة");
 
+        if(room.beglongTo!=user.ID&&user.isUser==true)
+        return StatusCode(400 ,"ليس لديك الصلاحيات");
 
-        var result = RoomBuisness.deleteRoom((Guid)room.ID, (Guid)adminid);
+        
+        var result = RoomBuisness.deleteRoom((Guid)room.ID, (Guid)userID);
 
         if (result == false)
-            return StatusCode(500, "some thing wrong");
-        return StatusCode(200, new { message = "deleted seccessfully" });
+            return StatusCode(500, "هناك مشكلة ما");
+        return StatusCode(200, new { message = "تم الحذف بنجاح" });
     }
 }

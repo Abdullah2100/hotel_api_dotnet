@@ -911,6 +911,58 @@ $$ LANGUAGE PLPGSQL;
 ---
 ---
 
+CREATE OR REPLACE FUNCTION blockRoom(
+        roomid_ UUID,
+        belongTo_ UUID
+    ) RETURNS Boolean AS $$
+DECLARE 
+updateAt_holder TIMESTAMP;
+isAdmin BOOLEAN :=FALSE;
+BEGIN
+    SELECT ROLE =1 INTO isAdmin  FROM users WHERE users.userid= belongTo_;
+    IF EXISTS(
+	 SELECT 1 FROM rooms WHERE roomid=roomid_
+	 AND (belongTo <> belongTo_ or  isAdmin = FALSE )
+	) THEN
+     RAISE EXCEPTION 'only room owner can update room data';
+	END IF ;
+
+	-- IF EXISTS(
+	--  SELECT 1 FROM rooms WHERE roomid=roomid_
+	--  AND (isdeleted = TRUE )) THEN
+ --     RAISE EXCEPTION 'لا يمكن اخفاء الغرفة لانها بالفعل محذوفة';
+	-- END IF ;
+
+	-- IF EXISTS(
+	--  SELECT 1 FROM rooms WHERE roomid=roomid_
+	--  AND (isblock = TRUE )) THEN
+ --     RAISE EXCEPTION 'لا يمكن اخفاء الغرفة لانها بالفعل مخفية';
+	-- END IF ;
+	
+    UPDATE rooms
+    SET isblock = CASE
+            WHEN isAdmin=TRUE AND isblock =FALSE 
+			THEN TRUE ELSE FALSE
+        END,
+       	isdeleted=  CASE
+            WHEN isAdmin = FALSE AND isdeleted =FALSE 
+			THEN TRUE ELSE FALSE
+        END,
+        updateAt = CURRENT_TIMESTAMP
+    WHERE roomid = roomid_;
+    SELECT updateAt INTO updateAt_holder
+    FROM rooms
+    WHERE roomid = roomid_;
+
+    RETURN TRUE;
+
+EXCEPTION
+
+    WHEN OTHERS THEN RAISE EXCEPTION 'Something went wrong: %',
+    SQLERRM;
+    RETURN FALSE;
+END;
+$$ LANGUAGE PLPGSQL;
 ---
 ---
 CREATE OR REPLACE FUNCTION fn_room_update() RETURNS TRIGGER AS $$
