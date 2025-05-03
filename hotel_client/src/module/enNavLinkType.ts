@@ -1,1 +1,0 @@
-export  enum enNavLinkType{ USERS,ROOMTYPE,LOGOUT,ROOMS}

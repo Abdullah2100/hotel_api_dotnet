@@ -1,1 +1,0 @@
-export enum enMessage { SECCESSFUL, ERROR, ATTENSTION }

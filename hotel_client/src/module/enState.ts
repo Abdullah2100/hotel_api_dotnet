@@ -1,1 +1,0 @@
-export enum enStatus{ loading,complate,none}
