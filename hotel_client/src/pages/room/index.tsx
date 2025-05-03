@@ -30,7 +30,7 @@ import { IUserModule } from '../../module/iUserModule';
 import ImagesPlay from '../../components/images';
 import { General } from '../../util/general';
 import DateFormat from '../../util/dateFormat';
-import { Switch } from '@mui/material';
+// import { Switch } from '@mui/material';
 
 const Room = () => {
   const refreshToken = useSelector((state: RootState) => state.auth.refreshToken)
@@ -803,7 +803,7 @@ const Room = () => {
            />
         <div>
           <h3>showing the deleted rooms</h3>
-          <Switch onChange={() => setShowingDeleted(prev => !prev)} />
+          {/* <Switch onChange={() => setShowingDeleted(prev => !prev)} /> */}
         </div>
 
         <UserShape

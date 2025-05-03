@@ -16,7 +16,7 @@ import RoomTypeTable from '../../components/tables/roomTypeTable';
 import ImageHolder from '../../components/imageHolder';
 import { generalMessage } from '../../util/generalPrint';
 import { Guid } from 'guid-typescript';
-import { Switch } from '@mui/material';
+// import { Switch } from '@mui/material';
 import { logout } from '../../controller/redux/jwtSlice';
 
 const RoomType = () => {
@@ -369,7 +369,7 @@ const RoomType = () => {
 
         <h3 className='pt-5'
         >showing deletion roomtype</h3>
-        <Switch onChange={() => { changeShowingDeleteionStatus(prev => prev = !prev) }} />
+        {/* <Switch onChange={() => { changeShowingDeleteionStatus(prev => prev = !prev) }} /> */}
       </div>
     </div>
   )
