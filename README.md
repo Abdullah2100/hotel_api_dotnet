@@ -4,7 +4,7 @@ A modern, scalable e-commerce platform built with Asp, React, and Blueprint.
 
 ## Overview
 
-this project is basic hotel managment system that is about creating room  make people booking it  ,also has dashboard for controlling the operation for admin
+this project is basic hotel managment system that is about creating room  make people booking it
 
 ## erd for project
 ![plot](./images/hote_design_erd.drawio.png)
@@ -12,7 +12,6 @@ this project is basic hotel managment system that is about creating room  make p
 ## Tech Stack
 
 - **Backend**: dotnet 9, c# 13 ,ADO.net
-- **Admin Panel**: React
 - **Database**: PostgreSQL
 - **Frontend**: React,  Tailwind CSS
 - **API**: RESTful with JSON:API specification
@@ -35,14 +34,6 @@ dotnet build
 
 
 ```
-
-## Project Structure Overview
-
-- `hotel_client` - admin banne
-- `hotel_api` - Api
-  
-
-For API development, follow the standards outlined in the [API Documentation](./API-DOCUMENTATION.md).
 
 ## Contributing
 
