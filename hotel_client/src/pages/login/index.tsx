@@ -4,7 +4,6 @@ import SubmitButton from '../../components/button/submitButton';
 import { TextInput } from '../../components/input/textInput';
 import '../../index.css'
 import { enStatus } from '../../module/enState';
-import { IAuthLoginModule } from '../../module/IAuthLoginModule';
 import { useContext, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useToastifiContext } from '../../context/toastifyCustom';
@@ -12,9 +11,10 @@ import apiClient from '../../services/apiClient';
 import { enApiType } from '../../module/enApiType';
 import { useMutation } from '@tanstack/react-query';
 import { setTokens } from '../../controller/redux/jwtSlice';
-import { AuthResult } from '../../module/iAuthResult';
 import { enMessage } from '../../module/enMessageType';
 import { PasswordInput } from '../../components/input/passwordInput';
+import { IAuthLoginModule } from '../../module/iAuthLoginModule';
+import { IAuthResult } from '../../module/iAuthResult';
 const Login = () => {
     const dispatcher = useDispatch()
     const { showToastiFy } = useContext(useToastifiContext)
@@ -26,7 +26,6 @@ const Login = () => {
         password: 'asAS12#$'
     });
 
-    const [enState, changeStatus] = useState<enStatus>(enStatus.none)
 
     const updateInput = (value: any, key: string) => {
         setUser((prev) => ({
@@ -37,7 +36,7 @@ const Login = () => {
 
 
 
-    const singup = useMutation({
+    const signIn = useMutation({
         mutationFn: (userData: any) =>
             apiClient({
                 enType: enApiType.POST,
@@ -46,7 +45,7 @@ const Login = () => {
             }),
         onSuccess: (data) => {
             setState(enStatus.complate)
-            const result = data.data as unknown as AuthResult;
+            const result = data.data as unknown as IAuthResult;
             dispatcher(setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken }))
         },
         onError: (error) => {
@@ -84,7 +83,7 @@ const Login = () => {
             "userNameOrEmail": authLoginModule.eamilOrUserName,
             "password": authLoginModule.password,
         }
-        await singup.mutate(data)
+        await signIn.mutate(data)
 
     };
 

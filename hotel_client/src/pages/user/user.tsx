@@ -19,7 +19,7 @@ import { enMessage } from '../../module/enMessageType';
 import NotFoundComponent from '../../components/notFoundContent';
 import { isHasCapitalLetter, isHasNumber, isHasSmallLetter, isHasSpicalCharacter, isValidEmail } from '../../util/regexValidation';
 import { Guid } from 'guid-typescript';
-import { Switch } from '@mui/material';
+// import { Switch } from '@mui/material';
 import ImageHolder from '../../components/imageHolder';
 import { logout } from '../../controller/redux/jwtSlice';
 import { IUserModule } from '../../module/iUserModule';
@@ -479,7 +479,7 @@ const User = () => {
         </div>
         <div>
           <h3>showing the deleted user</h3>
-          <Switch onChange={() => setShowingDeleted(prev => !prev)} />
+          {/* <Switch onChange={() => setShowingDeleted(prev => !prev)} /> */}
         </div>
       </div>
     </div>

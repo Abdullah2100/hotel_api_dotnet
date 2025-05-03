@@ -1,4 +1,4 @@
-import { Button, CircularProgress } from "@mui/material";
+import { Button } from "../ui/button"
 import { enStatus } from "../../module/enState";
 
 interface submitButtonProps {
@@ -17,7 +17,7 @@ const SubmitButton = (
         style = undefined,
         textstyle
     }: submitButtonProps) => {
-    return (<button
+    return (<Button
         onClick={(e)=>{
             e.preventDefault();
             buttonStatus !== enStatus.loading ?onSubmit() : undefined

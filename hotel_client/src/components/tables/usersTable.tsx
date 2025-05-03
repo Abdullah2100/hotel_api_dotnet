@@ -1,5 +1,4 @@
 import { Dispatch, SetStateAction } from 'react'
-import { Switch } from '@mui/material';
 import NotFoundComponent from '../notFoundContent';
 import { ArrowUturnLeftIcon, PencilIcon, TrashIcon } from '@heroicons/react/16/solid';
 import { IAuthModule } from '../../module/iAuthModule';
@@ -84,11 +83,12 @@ const UersTable = ({
                 {user?.personData?.createdAt === undefined ? "" : user.brithDay.split('T')[0]}
               </td>
               <td className="px-4 py-2 border-b text-left whitespace-nowrap">
-                <Switch
+               {/* <Switch
                   defaultChecked={user.isVip}
                   disabled={user.isDeleted}
                   onChange={() => makeUserVip(user.userId)}
                 />
+                */}
               </td>
 
               <td className="px-4 py-1   text-left ">
