@@ -169,7 +169,7 @@ namespace hotel_data
                                         password: password,
                                         imagePath:imageHolder==null?"":imageHolder.path,
                                         isUser:((int)reader["role"])==0,
-                                        isdeleted:((bool)reader["isdeleted"])
+                                        isdeleted:((bool)reader["ispersondeleted"])
 
                                     );
 
